@@ -1,0 +1,2180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Controle de Treinamentos | Neodent CQ</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --sidebar:#2E0A3E;--sidebar-hover:#4A1260;--sidebar-active:#7B2D8B;
+  --primary:#7B2D8B;--primary-light:#F0E4F6;--primary-dark:#5C1A6E;
+  --success:#16a34a;--success-light:#dcfce7;--warning:#d97706;--warning-light:#fef3c7;
+  --danger:#dc2626;--danger-light:#fee2e2;--purple:#0891b2;--purple-light:#e0f2fe;
+  --muted:#64748b;--muted-light:#f1f5f9;--bg:#FAF5FC;--card:#ffffff;
+  --border:#E8D5F0;--text:#1a0a22;--radius:8px;
+  --shadow:0 1px 4px rgba(123,45,139,.10);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden}
+
+/* ---- ANIMATIONS ---- */
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes kpiIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes modalIn{from{opacity:0;transform:translateY(22px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes fillBar{from{width:0}}
+@keyframes rippleOut{to{transform:translate(-50%,-50%) scale(10);opacity:0}}
+@keyframes logoPulse{0%,100%{opacity:1}50%{opacity:.8}}
+@keyframes badgePulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.4)}70%{box-shadow:0 0 0 5px rgba(220,38,38,0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+[id^="page-"].anim{animation:pageIn .3s ease both}
+.kpi-card{animation:kpiIn .45s ease both}
+.kpi-card:nth-child(1){animation-delay:.00s}
+.kpi-card:nth-child(2){animation-delay:.05s}
+.kpi-card:nth-child(3){animation-delay:.10s}
+.kpi-card:nth-child(4){animation-delay:.15s}
+.kpi-card:nth-child(5){animation-delay:.20s}
+.card{transition:transform .2s ease,box-shadow .2s ease}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(123,45,139,.14)}
+.prog-fill{animation:fillBar .9s cubic-bezier(.4,0,.2,1) both}
+.modal{animation:modalIn .25s cubic-bezier(.34,1.46,.64,1) both}
+.b-late{animation:badgePulse 2s infinite}
+.click-ripple{position:fixed;width:24px;height:24px;border-radius:50%;background:rgba(123,45,139,.25);transform:translate(-50%,-50%) scale(0);pointer-events:none;z-index:9999;animation:rippleOut .55s cubic-bezier(.4,0,.2,1) forwards}
+
+/* SIDEBAR */
+.sidebar{width:226px;background:var(--sidebar);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:20px 16px 18px;border-bottom:1px solid rgba(255,255,255,.08);background:linear-gradient(160deg,#3D0F52 0%,#2E0A3E 100%)}
+.neodent-svg{animation:logoPulse 4s ease-in-out infinite}
+.sidebar-logo p{font-size:11px;color:#C9A8D8;margin-top:4px;letter-spacing:.3px}
+.sidebar-nav{padding:10px 8px;flex:1;overflow-y:auto}
+.nav-section{font-size:10px;font-weight:700;color:#7B4E8A;letter-spacing:1px;text-transform:uppercase;padding:14px 8px 6px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:6px;cursor:pointer;color:#C9A8D8;font-size:13px;font-weight:500;transition:all .2s cubic-bezier(.4,0,.2,1);margin-bottom:2px;user-select:none}
+.nav-item:hover:not(.active){background:var(--sidebar-hover);color:#fff;transform:translateX(4px)}
+.nav-item.active{background:var(--primary);color:#fff;box-shadow:0 4px 14px rgba(123,45,139,.4)}
+.nav-item svg{width:15px;height:15px;flex-shrink:0;stroke-width:2}
+.sidebar-footer{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:#7B4E8A}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left h1{font-size:18px;font-weight:800}
+.topbar-left p{font-size:12px;color:var(--muted);margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.month-nav{display:flex;align-items:center;gap:0;background:var(--bg);border:1.5px solid var(--border);border-radius:7px;overflow:hidden}
+.month-nav button{background:none;border:none;cursor:pointer;color:var(--muted);padding:7px 12px;font-size:16px;line-height:1;transition:background .15s}
+.month-nav button:hover{background:var(--border)}
+.month-nav span{font-size:13px;font-weight:700;min-width:130px;text-align:center;padding:0 4px}
+.content{flex:1;overflow-y:auto;padding:24px}
+
+/* BTN */
+.btn{padding:8px 16px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:all .2s ease;text-decoration:none;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:rgba(255,255,255,0);transition:background .15s}
+.btn:hover::after{background:rgba(255,255,255,.12)}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,#7B2D8B 0%,#9B3DAB 100%);color:#fff;box-shadow:0 4px 14px rgba(123,45,139,.35)}
+.btn-primary:hover{box-shadow:0 6px 20px rgba(123,45,139,.5)}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--text)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-icon{padding:6px;border-radius:5px}
+#btn-action{display:none}
+
+/* KPI */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:var(--card);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);border-top:3px solid transparent}
+.kpi-card.k-total{border-color:var(--primary)}
+.kpi-card.k-done{border-color:var(--success)}
+.kpi-card.k-prog{border-color:var(--purple)}
+.kpi-card.k-pend{border-color:var(--muted)}
+.kpi-card.k-late{border-color:var(--danger)}
+.kpi-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.kpi-value{font-size:34px;font-weight:900;line-height:1;margin:6px 0 3px}
+.kpi-sub{font-size:11px;color:var(--muted)}
+.k-total .kpi-value{color:var(--primary)}
+.k-done .kpi-value{color:var(--success)}
+.k-prog .kpi-value{color:var(--purple)}
+.k-pend .kpi-value{color:var(--muted)}
+.k-late .kpi-value{color:var(--danger)}
+
+/* CARD */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:16px}
+.card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:14px;font-weight:700}
+.card-body{padding:16px 20px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-wrap{position:relative;height:220px}
+
+/* BADGE */
+.badge{padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;display:inline-block}
+.b-done{background:var(--success-light);color:var(--success)}
+.b-prog{background:var(--purple-light);color:var(--purple)}
+.b-pend{background:var(--muted-light);color:var(--muted)}
+.b-late{background:var(--danger-light);color:var(--danger)}
+.b-info{background:var(--primary-light);color:var(--primary)}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:10px 12px;border-bottom:2px solid var(--border);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#f8fafc}
+
+/* TEAM MAP */
+.map-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.map-table{border-collapse:collapse;white-space:nowrap}
+.map-table th,.map-table td{border:1px solid var(--border);padding:8px 10px;font-size:12px;text-align:center}
+.map-table th{background:#f8fafc;font-weight:700;position:sticky;top:0;z-index:1}
+.map-table .emp-col{text-align:left;min-width:160px;position:sticky;left:0;background:var(--card);z-index:2}
+.map-table thead .emp-col{z-index:3;background:#f8fafc}
+.emp-name{font-weight:700;font-size:12px}
+.emp-shift{font-size:10px;color:var(--muted)}
+.map-cell{cursor:pointer;border-radius:4px;padding:4px 8px;font-size:11px;font-weight:700;display:inline-block;transition:opacity .15s;white-space:nowrap}
+.map-cell:hover{opacity:.75}
+.mc-done{background:var(--success-light);color:var(--success)}
+.mc-prog{background:var(--purple-light);color:var(--purple)}
+.mc-pend{background:var(--muted-light);color:var(--muted)}
+.mc-late{background:var(--danger-light);color:var(--danger)}
+
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.cal-dh{background:#f8fafc;text-align:center;padding:8px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.cal-day{background:var(--card);min-height:88px;padding:5px}
+.cal-day.empty{background:#fafafa}
+.cal-day.today{background:#eff6ff}
+.cal-dn{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.cal-day.today .cal-dn{color:var(--primary);background:var(--primary);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;margin-bottom:4px}
+.cal-ev{font-size:10px;padding:2px 5px;border-radius:3px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ce-late{background:var(--danger-light);color:var(--danger)}
+.ce-pend{background:var(--warning-light);color:var(--warning)}
+.ce-done{background:var(--success-light);color:var(--success)}
+.ce-prog{background:var(--purple-light);color:var(--purple)}
+
+/* PROGRESS */
+.prog-bar{height:7px;background:var(--border);border-radius:99px;overflow:hidden;margin-top:6px}
+.prog-fill{height:100%;border-radius:99px;transition:width .4s}
+
+/* ALERT */
+.alert-row{display:flex;align-items:flex-start;gap:10px;padding:11px 0;border-bottom:1px solid var(--border)}
+.alert-row:last-child{border-bottom:none}
+.alert-dot{width:8px;height:8px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.ad-late{background:var(--danger)}
+.ad-warn{background:var(--warning)}
+.alert-body{flex:1;min-width:0}
+.alert-name{font-size:13px;font-weight:700}
+.alert-sub{font-size:11px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:200;align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:12px;width:520px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal.wide{width:600px}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-head h3{font-size:16px;font-weight:800}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:22px;line-height:1;padding:0 4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px 22px}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+
+/* FORM */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+.fc{width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;color:var(--text);background:var(--card);transition:border .15s;font-family:inherit;resize:none}
+.fc:focus{outline:none;border-color:var(--primary)}
+.fc:disabled{background:var(--bg);cursor:default}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fc-info{padding:10px 14px;background:var(--bg);border-radius:6px;font-size:13px;margin-bottom:14px}
+
+/* EMPLOYEE PICKER */
+.emp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:210px;overflow-y:auto;border:1.5px solid var(--border);border-radius:6px;padding:10px}
+.emp-check{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:3px}
+.emp-check input{cursor:pointer;accent-color:var(--primary)}
+.shift-bar{display:flex;gap:6px;margin-bottom:8px}
+.shift-btn{padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);background:transparent;font-size:12px;cursor:pointer;font-weight:700;transition:all .15s;color:var(--muted)}
+.shift-btn:hover{border-color:var(--primary);color:var(--primary)}
+.shift-btn.on{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* CAT COLORS */
+.cat-Qualidade{background:#f0e4f6;color:#7B2D8B}
+.cat-Segurança{background:#fef3c7;color:#b45309}
+.cat-Regulatório{background:#dbeafe;color:#1d4ed8}
+.cat-Processo{background:#dcfce7;color:#15803d}
+.cat-Geral{background:#f1f5f9;color:#475569}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:44px 20px;color:var(--muted)}
+.empty svg{margin-bottom:12px;opacity:.25}
+.empty h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty p{font-size:13px}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+
+/* TABS */
+.tabs{display:flex;border-bottom:2px solid var(--border);margin-bottom:20px}
+.tab{padding:10px 20px;cursor:pointer;font-size:13px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;user-select:none}
+.tab.on{color:var(--primary);border-color:var(--primary)}
+
+/* WEEKLY GRID */
+.wk-wrap{overflow-x:auto}
+.wk-table{border-collapse:collapse;min-width:650px;width:100%}
+.wk-table th,.wk-table td{border:1px solid var(--border);padding:0}
+.wk-table th{background:#f8fafc;font-size:11px;font-weight:700;padding:8px 10px;text-align:center}
+.wk-lbl{text-align:left!important;width:80px;padding:8px!important}
+.wk-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding:6px 4px;min-height:58px;transition:opacity .15s}
+.wk-cell:hover{opacity:.7}
+.wk-done{background:var(--success-light);color:var(--success)}
+.wk-todo{background:var(--warning-light);color:#b45309}
+.wk-fut{background:#f8fafc;color:#d1d5db}
+.wk-check{font-size:14px;font-weight:900}
+.wk-topic{font-size:9px;text-align:center;line-height:1.2;max-width:88px;opacity:.8}
+
+/* ENROLL CARD */
+.enroll-card{display:flex;align-items:center;gap:14px;padding:13px 16px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .15s}
+.enroll-card:hover{border-color:var(--primary);background:var(--primary-light)}
+.enroll-info{flex:1}
+.enroll-name{font-weight:700;font-size:14px}
+.enroll-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--primary);cursor:pointer;margin-bottom:16px}
+.back-btn:hover{opacity:.7}
+
+/* SESSION CARD */
+.session-card{border:1px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden}
+.session-head{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;background:var(--bg)}
+.session-detail{padding:12px 16px;border-top:1px solid var(--border)}
+
+/* CYBER */
+.cyber-course{border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.cyber-head{padding:13px 16px;background:var(--bg);display:flex;align-items:center;justify-content:space-between}
+.score-hi{background:var(--success-light);color:var(--success);padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.score-mid{background:var(--warning-light);color:var(--warning);padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+.score-lo{background:var(--danger-light);color:var(--danger);padding:2px 7px;border-radius:20px;font-size:11px;font-weight:700}
+
+/* FILTER PANEL */
+.filter-panel{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.fg-i{display:flex;flex-direction:column;gap:4px}
+.fg-i label{font-size:11px;font-weight:700;color:var(--muted)}
+.fg-i select,.fg-i input{padding:7px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;background:var(--card);cursor:pointer}
+
+/* REPORT */
+.rep-wrap{background:var(--card);border-radius:8px;box-shadow:var(--shadow);padding:24px}
+.rep-title{font-size:17px;font-weight:800;margin-bottom:2px}
+.rep-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.rep-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.rep-tbl th{background:#f8fafc;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--border)}
+.rep-tbl td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.rep-tbl tr:last-child td{border-bottom:none}
+.rep-grp{background:#f1f5f9;font-weight:800;font-size:13px}
+
+/* GRID-3 / GRID-4 */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px}
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+
+/* PRINT */
+@media print{
+  .sidebar,.topbar,.filter-panel,.no-print{display:none!important}
+  .main{overflow:visible!important}
+  .content{padding:0!important;overflow:visible!important}
+  .rep-wrap{box-shadow:none!important}
+  body{background:#fff!important}
+}
+
+/* LAUNCH GROUP */
+.launch-group{border:1px solid var(--border);border-radius:8px;margin-bottom:14px;overflow:hidden}
+.launch-group-header{padding:13px 16px;background:var(--bg);display:flex;align-items:center;justify-content:space-between}
+.lg-title{font-weight:800;font-size:14px}
+.lg-meta{font-size:12px;color:var(--muted);margin-top:2px}
+.lg-stat{text-align:right}
+.lg-pct{font-size:20px;font-weight:900}
+.lg-sub{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg class="neodent-svg" viewBox="0 0 170 38" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:150px;height:auto">
+      <!-- Icon: circle with crescent + dot (Neodent symbol) -->
+      <circle cx="19" cy="19" r="18" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>
+      <path d="M26 7.5 A13.5 13.5 0 1 0 26 30.5 L26 26.5 A9.5 9.5 0 1 1 26 11.5 Z" fill="white"/>
+      <circle cx="27" cy="19" r="4.5" fill="white"/>
+      <!-- NEODENT. text -->
+      <text x="44" y="26" font-family="'Segoe UI',Arial,sans-serif" font-weight="900" font-size="19" fill="white" letter-spacing="1.2">NEODENT.</text>
+    </svg>
+    <p>Controle de Qualidade</p>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Geral</div>
+    <div class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-page="calendario" onclick="navigate('calendario')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Calend&#225;rio
+    </div>
+    <div class="nav-item" data-page="mapa" onclick="navigate('mapa')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Mapa da Equipe
+    </div>
+    <div class="nav-item" data-page="relatorios" onclick="navigate('relatorios')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg>
+      Relat&#243;rios
+    </div>
+    <div class="nav-section">Treinamentos</div>
+    <div class="nav-item" data-page="lancamentos" onclick="navigate('lancamentos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+      Mensais
+    </div>
+    <div class="nav-item" data-page="padronizado" onclick="navigate('padronizado')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      Padronizado
+    </div>
+    <div class="nav-item" data-page="tecnicos" onclick="navigate('tecnicos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      T&#233;cnicos
+    </div>
+    <div class="nav-item" data-page="ciber" onclick="navigate('ciber')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Ciberseguran&#231;a
+    </div>
+    <div class="nav-section">Cadastros</div>
+    <div class="nav-item" data-page="funcionarios" onclick="navigate('funcionarios')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Funcion&#225;rios
+    </div>
+    <div class="nav-item" data-page="treinamentos" onclick="navigate('treinamentos')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+      Cat&#225;logo
+    </div>
+  </nav>
+  <div class="sidebar-footer" style="display:flex;flex-direction:column;gap:8px">
+    <button onclick="seedDemo()" style="width:100%;padding:8px;background:rgba(123,45,139,.25);border:1px solid rgba(123,45,139,.4);color:#C9A8D8;border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;text-align:left;transition:all .2s" onmouseover="this.style.background='rgba(123,45,139,.45)';this.style.color='#fff'" onmouseout="this.style.background='rgba(123,45,139,.25)';this.style.color='#C9A8D8'">
+      &#x1F9EA; Carregar dados de teste
+    </button>
+    <span style="color:#334155">Treinamentos CQ &bull; v1.0</span>
+  </div>
+</aside>
+
+<!-- ===== MAIN ===== -->
+<main class="main">
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 id="page-title">Dashboard</h1>
+      <p id="page-sub">Vis&#227;o geral do m&#234;s</p>
+    </div>
+    <div class="topbar-right">
+      <span id="sync-badge" style="font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;background:var(--muted-light);color:var(--muted);letter-spacing:.3px"></span>
+      <div class="month-nav">
+        <button onclick="prevMonth()">&#8249;</button>
+        <span id="month-label"></span>
+        <button onclick="nextMonth()">&#8250;</button>
+      </div>
+      <button class="btn btn-primary" id="btn-action" onclick="handleAction()">+ A&#231;&#227;o</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- ===== DASHBOARD ===== -->
+    <div id="page-dashboard">
+      <div class="kpi-grid">
+        <div class="kpi-card k-total"><div class="kpi-label">Total</div><div class="kpi-value" id="kv-total">0</div><div class="kpi-sub">registros no m&#234;s</div></div>
+        <div class="kpi-card k-done"><div class="kpi-label">Conclu&#237;dos</div><div class="kpi-value" id="kv-done">0</div><div class="kpi-sub" id="ks-done">—</div></div>
+        <div class="kpi-card k-prog"><div class="kpi-label">Em Andamento</div><div class="kpi-value" id="kv-prog">0</div><div class="kpi-sub" id="ks-prog">—</div></div>
+        <div class="kpi-card k-pend"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="kv-pend">0</div><div class="kpi-sub" id="ks-pend">—</div></div>
+        <div class="kpi-card k-late"><div class="kpi-label">Atrasados</div><div class="kpi-value" id="kv-late">0</div><div class="kpi-sub" id="ks-late">—</div></div>
+      </div>
+      <div class="grid-2" style="margin-bottom:16px">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Status Geral</span></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="ch-status"></canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Conclus&#227;o por Treinamento</span></div>
+          <div class="card-body"><div class="chart-wrap"><canvas id="ch-tr"></canvas></div></div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Alertas</span>
+            <span class="badge b-late" id="alert-badge" style="display:none"></span>
+          </div>
+          <div class="card-body" id="alert-list"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Conclus&#227;o por Turno</span></div>
+          <div class="card-body" id="shift-prog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== MAPA ===== -->
+    <div id="page-mapa" style="display:none">
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+        <select class="fc" style="width:auto;padding:7px 12px" id="map-shift" onchange="renderMapa()">
+          <option value="">Todos os turnos</option>
+          <option value="1&#176;">1&#176; Turno</option>
+          <option value="2&#176;">2&#176; Turno</option>
+          <option value="3&#176;">3&#176; Turno</option>
+        </select>
+        <span style="font-size:12px;color:var(--muted)">Clique em uma c&#233;lula para atualizar o status</span>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Mapa da Equipe &mdash; <span id="mapa-month"></span></span></div>
+        <div class="card-body map-wrap" id="mapa-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== CALENDÁRIO ===== -->
+    <div id="page-calendario" style="display:none">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Calend&#225;rio de Prazos</span>
+          <div style="display:flex;gap:6px">
+            <span class="badge b-late">Atrasado</span>
+            <span class="badge" style="background:var(--warning-light);color:var(--warning)">A vencer</span>
+            <span class="badge b-prog">Em andamento</span>
+            <span class="badge b-done">Conclu&#237;do</span>
+          </div>
+        </div>
+        <div class="card-body" id="cal-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== FUNCIONÁRIOS ===== -->
+    <div id="page-funcionarios" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Funcion&#225;rios</span></div>
+        <div class="card-body" id="emp-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== TREINAMENTOS ===== -->
+    <div id="page-treinamentos" style="display:none">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Cat&#225;logo de Treinamentos</span></div>
+        <div class="card-body" id="tr-body"></div>
+      </div>
+    </div>
+
+    <!-- ===== LANÇAMENTOS ===== -->
+    <div id="page-lancamentos" style="display:none">
+      <div id="lan-body"></div>
+    </div>
+
+    <!-- ===== PADRONIZADO ===== -->
+    <div id="page-padronizado" style="display:none">
+      <div class="grid-4" style="margin-bottom:16px">
+        <div class="kpi-card k-total"><div class="kpi-label">Matriculados</div><div class="kpi-value" id="pd-kv1">0</div></div>
+        <div class="kpi-card k-done"><div class="kpi-label">Conclu&#237;ram</div><div class="kpi-value" id="pd-kv2">0</div></div>
+        <div class="kpi-card k-prog"><div class="kpi-label">Em Andamento</div><div class="kpi-value" id="pd-kv3">0</div></div>
+        <div class="kpi-card k-pend"><div class="kpi-label">M&#233;dia Progresso</div><div class="kpi-value" id="pd-kv4">—</div></div>
+      </div>
+      <div class="tabs" id="pd-tabs">
+        <div class="tab on" onclick="switchPdTab('mat',this)">Matr&#237;culas</div>
+        <div class="tab" onclick="switchPdTab('prog',this)">Programa</div>
+      </div>
+      <div id="pd-mat">
+        <div class="back-btn" id="pd-back" style="display:none" onclick="showPdList()">&#8592; Voltar para matr&#237;culas</div>
+        <div id="pd-list"></div>
+        <div id="pd-detail" style="display:none"></div>
+      </div>
+      <div id="pd-prog" style="display:none">
+        <div class="card"><div class="card-header"><span class="card-title">Programa Padr&#227;o de Onboarding</span><button class="btn btn-ghost btn-sm no-print" onclick="resetCurr()">Restaurar padr&#227;o</button></div><div class="card-body wk-wrap"><div id="pd-prog-grid"></div></div></div>
+      </div>
+    </div>
+
+    <!-- ===== TÉCNICOS ===== -->
+    <div id="page-tecnicos" style="display:none">
+      <div class="grid-3" style="margin-bottom:16px">
+        <div class="kpi-card k-total"><div class="kpi-label">Total Sess&#245;es</div><div class="kpi-value" id="tc-kv1">0</div></div>
+        <div class="kpi-card k-done"><div class="kpi-label">Participa&#231;&#245;es</div><div class="kpi-value" id="tc-kv2">0</div></div>
+        <div class="kpi-card k-prog"><div class="kpi-label">M&#233;dia Participantes</div><div class="kpi-value" id="tc-kv3">0</div></div>
+      </div>
+      <div id="tc-body"></div>
+    </div>
+
+    <!-- ===== CIBERSEGURANÇA ===== -->
+    <div id="page-ciber" style="display:none">
+      <div class="kpi-grid" style="margin-bottom:16px">
+        <div class="kpi-card k-total"><div class="kpi-label">Cursos</div><div class="kpi-value" id="cb-kv1">0</div></div>
+        <div class="kpi-card k-done"><div class="kpi-label">Conclu&#237;dos</div><div class="kpi-value" id="cb-kv2">0</div></div>
+        <div class="kpi-card k-prog"><div class="kpi-label">Em Andamento</div><div class="kpi-value" id="cb-kv3">0</div></div>
+        <div class="kpi-card k-pend"><div class="kpi-label">Pendentes</div><div class="kpi-value" id="cb-kv4">0</div></div>
+        <div class="kpi-card k-late"><div class="kpi-label">Atrasados</div><div class="kpi-value" id="cb-kv5">0</div></div>
+      </div>
+      <div id="cb-body"></div>
+    </div>
+
+    <!-- ===== RELATÓRIOS ===== -->
+    <div id="page-relatorios" style="display:none">
+      <div class="filter-panel no-print">
+        <div class="fg-i"><label>Tipo de Relat&#243;rio</label>
+          <select id="rep-type" onchange="renderRelatorios()">
+            <option value="mensal">Resumo Mensal de Treinamentos</option>
+            <option value="individual">Status por Funcion&#225;rio</option>
+            <option value="onboarding">Progresso de Onboarding</option>
+            <option value="ciber">Conformidade Ciberseguran&#231;a</option>
+            <option value="tecnicos">Sess&#245;es T&#233;cnicas</option>
+          </select>
+        </div>
+        <div class="fg-i"><label>Turno</label>
+          <select id="rep-shift" onchange="renderRelatorios()">
+            <option value="">Todos</option>
+            <option value="1°">1° Turno</option>
+            <option value="2°">2° Turno</option>
+            <option value="3°">3° Turno</option>
+          </select>
+        </div>
+        <div class="fg-i"><label>M&#234;s/Ano</label>
+          <input type="month" id="rep-month" onchange="renderRelatorios()">
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px">
+          <button class="btn btn-ghost" onclick="window.print()">&#128438; Imprimir</button>
+          <button class="btn btn-ghost" onclick="exportCurrentCSV()">&#8595; Exportar CSV</button>
+        </div>
+      </div>
+      <div id="rep-content"></div>
+    </div>
+
+  </div><!-- /content -->
+</main>
+
+<!-- ===== MODAL: FUNCIONÁRIO ===== -->
+<div class="modal-bg" id="m-emp">
+  <div class="modal">
+    <div class="modal-head"><h3 id="m-emp-title">Novo Funcion&#225;rio</h3><button class="modal-close" onclick="close('m-emp')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="e-id">
+      <div class="fr">
+        <div class="fg"><label class="fl">Nome *</label><input class="fc" id="e-name" placeholder="Nome completo"></div>
+        <div class="fg"><label class="fl">Turno *</label>
+          <select class="fc" id="e-shift">
+            <option value="1&#176;">1&#176; Turno</option>
+            <option value="2&#176;">2&#176; Turno</option>
+            <option value="3&#176;">3&#176; Turno</option>
+          </select>
+        </div>
+      </div>
+      <div class="fg"><label class="fl">Fun&#231;&#227;o / Cargo</label><input class="fc" id="e-role" placeholder="Ex: T&#233;cnico de Qualidade"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-emp')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEmp()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: TREINAMENTO ===== -->
+<div class="modal-bg" id="m-tr">
+  <div class="modal">
+    <div class="modal-head"><h3 id="m-tr-title">Novo Treinamento</h3><button class="modal-close" onclick="close('m-tr')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="t-id">
+      <div class="fg"><label class="fl">Nome do Treinamento *</label><input class="fc" id="t-name" placeholder="Ex: BPF &#8211; Boas Pr&#225;ticas de Fabrica&#231;&#227;o"></div>
+      <div class="fg"><label class="fl">Categoria</label>
+        <select class="fc" id="t-cat">
+          <option>Qualidade</option><option>Seguran&#231;a</option><option>Regulat&#243;rio</option><option>Processo</option><option>Geral</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-tr')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTr()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: LANÇAMENTO ===== -->
+<div class="modal-bg" id="m-lan">
+  <div class="modal wide">
+    <div class="modal-head"><h3>Lan&#231;ar Treinamento</h3><button class="modal-close" onclick="close('m-lan')">&#xd7;</button></div>
+    <div class="modal-body">
+      <div class="fr">
+        <div class="fg"><label class="fl">Treinamento *</label><select class="fc" id="l-tr"></select></div>
+        <div class="fg"><label class="fl">Data de Lan&#231;amento *</label><input class="fc" type="date" id="l-date" oninput="calcDue()"></div>
+      </div>
+      <div class="fg"><label class="fl">Prazo (lan&#231;amento + 20 dias)</label><input class="fc" id="l-due" disabled></div>
+      <div class="fg">
+        <label class="fl">Selecionar Funcion&#225;rios</label>
+        <div class="shift-bar">
+          <button class="shift-btn on" onclick="selShift(this,'')">Todos</button>
+          <button class="shift-btn" onclick="selShift(this,'1&#176;')">1&#176; Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'2&#176;')">2&#176; Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'3&#176;')">3&#176; Turno</button>
+        </div>
+        <div class="emp-grid" id="l-emps"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-lan')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveLan()">Lan&#231;ar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: STATUS REGISTRO ===== -->
+<div class="modal-bg" id="m-rec">
+  <div class="modal">
+    <div class="modal-head"><h3>Atualizar Status</h3><button class="modal-close" onclick="close('m-rec')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="r-id">
+      <div class="fc-info" id="r-info"></div>
+      <div class="fg"><label class="fl">Status *</label>
+        <select class="fc" id="r-status" onchange="toggleRec()">
+          <option value="pending">Pendente</option>
+          <option value="in_progress">Em Andamento</option>
+          <option value="completed">Conclu&#237;do</option>
+          <option value="delayed">Atrasado</option>
+        </select>
+      </div>
+      <div id="r-done-wrap" style="display:none" class="fg"><label class="fl">Data de Conclus&#227;o *</label><input class="fc" type="date" id="r-done-date"></div>
+      <div id="r-late-wrap" style="display:none" class="fg"><label class="fl">Motivo do Atraso *</label><textarea class="fc" id="r-reason" rows="3" placeholder="Descreva o motivo..."></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);margin-right:auto" onclick="delRec()">Excluir</button>
+      <button class="btn btn-ghost" onclick="close('m-rec')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRec()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: MATRICULAR ===== -->
+<div class="modal-bg" id="m-enroll">
+  <div class="modal">
+    <div class="modal-head"><h3>Matricular Funcion&#225;rio</h3><button class="modal-close" onclick="close('m-enroll')">&#xd7;</button></div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Funcion&#225;rio *</label><select class="fc" id="en-emp"></select></div>
+      <div class="fg"><label class="fl">Data de In&#237;cio *</label><input class="fc" type="date" id="en-date"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-enroll')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEnroll()">Matricular</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: EDITAR TÓPICO ===== -->
+<div class="modal-bg" id="m-topic">
+  <div class="modal">
+    <div class="modal-head"><h3 id="m-topic-title">Editar T&#243;pico</h3><button class="modal-close" onclick="close('m-topic')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="tp-key">
+      <div class="fg"><label class="fl">T&#243;pico</label><input class="fc" id="tp-val" placeholder="Descri&#231;&#227;o do t&#243;pico"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-topic')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTopic()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: NOVA SESSÃO TÉCNICA ===== -->
+<div class="modal-bg" id="m-tech">
+  <div class="modal wide">
+    <div class="modal-head"><h3 id="m-tech-title">Nova Sess&#227;o T&#233;cnica</h3><button class="modal-close" onclick="close('m-tech')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="th-id">
+      <div class="fg"><label class="fl">T&#237;tulo *</label><input class="fc" id="th-title" placeholder="Tema da apresenta&#231;&#227;o"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Categoria</label>
+          <select class="fc" id="th-cat">
+            <option>Qualidade</option><option>Seguran&#231;a</option><option>Regulat&#243;rio</option><option>Processo</option><option>Geral</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Data *</label><input class="fc" type="date" id="th-date"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Apresentador</label><input class="fc" id="th-pres" placeholder="Nome (funcion&#225;rio ou externo)"></div>
+        <div class="fg"><label class="fl">Dura&#231;&#227;o (horas)</label><input class="fc" type="number" id="th-dur" min="0.5" step="0.5" value="1"></div>
+      </div>
+      <div class="fg"><label class="fl">Descri&#231;&#227;o</label><textarea class="fc" id="th-desc" rows="2" placeholder="Resumo do conte&#250;do..."></textarea></div>
+      <div class="fg">
+        <label class="fl">Participantes</label>
+        <div class="shift-bar">
+          <button class="shift-btn on" onclick="selShift(this,'')">Todos</button>
+          <button class="shift-btn" onclick="selShift(this,'1°')">1° Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'2°')">2° Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'3°')">3° Turno</button>
+        </div>
+        <div class="emp-grid" id="th-emps"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);margin-right:auto" id="th-del-btn" onclick="deleteTech()" style="display:none">Excluir</button>
+      <button class="btn btn-ghost" onclick="close('m-tech')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTech()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: CURSO CIBER ===== -->
+<div class="modal-bg" id="m-cb-course">
+  <div class="modal">
+    <div class="modal-head"><h3 id="m-cb-title">Novo Curso</h3><button class="modal-close" onclick="close('m-cb-course')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cc-id">
+      <div class="fg"><label class="fl">Nome do Curso *</label><input class="fc" id="cc-name" placeholder="Ex: Phishing e Engenharia Social"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Fornecedor</label><input class="fc" id="cc-prov" placeholder="Neodent IT / Externo"></div>
+        <div class="fg"><label class="fl">Prazo</label><input class="fc" type="date" id="cc-due"></div>
+      </div>
+      <div class="fg" style="display:flex;align-items:center;gap:10px">
+        <input type="checkbox" id="cc-mand" style="width:auto;accent-color:var(--primary)">
+        <label class="fl" style="margin:0;cursor:pointer" for="cc-mand">Obrigat&#243;rio para todos</label>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-cb-course')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCbCourse()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: LANÇAR CURSO CIBER ===== -->
+<div class="modal-bg" id="m-cb-lan">
+  <div class="modal wide">
+    <div class="modal-head"><h3>Lan&#231;ar Curso para Funcion&#225;rios</h3><button class="modal-close" onclick="close('m-cb-lan')">&#xd7;</button></div>
+    <div class="modal-body">
+      <div class="fg"><label class="fl">Curso</label><input class="fc" id="cb-lan-name" disabled></div>
+      <input type="hidden" id="cb-lan-cid">
+      <div class="fg">
+        <label class="fl">Funcion&#225;rios</label>
+        <div class="shift-bar">
+          <button class="shift-btn on" onclick="selShift(this,'')">Todos</button>
+          <button class="shift-btn" onclick="selShift(this,'1°')">1° Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'2°')">2° Turno</button>
+          <button class="shift-btn" onclick="selShift(this,'3°')">3° Turno</button>
+        </div>
+        <div class="emp-grid" id="cb-lan-emps"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="close('m-cb-lan')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCbLan()">Lan&#231;ar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL: STATUS CIBER ===== -->
+<div class="modal-bg" id="m-cb-rec">
+  <div class="modal">
+    <div class="modal-head"><h3>Atualizar Registro Ciber</h3><button class="modal-close" onclick="close('m-cb-rec')">&#xd7;</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="cbr-id">
+      <div class="fc-info" id="cbr-info"></div>
+      <div class="fg"><label class="fl">Status *</label>
+        <select class="fc" id="cbr-status" onchange="toggleCbRec()">
+          <option value="pending">Pendente</option>
+          <option value="in_progress">Em Andamento</option>
+          <option value="completed">Conclu&#237;do</option>
+          <option value="delayed">Atrasado</option>
+        </select>
+      </div>
+      <div id="cbr-done-wrap" style="display:none">
+        <div class="fr">
+          <div class="fg"><label class="fl">Data de Conclus&#227;o</label><input class="fc" type="date" id="cbr-date"></div>
+          <div class="fg"><label class="fl">Pontua&#231;&#227;o (0–100)</label><input class="fc" type="number" id="cbr-score" min="0" max="100" placeholder="Ex: 85"></div>
+        </div>
+      </div>
+      <div id="cbr-late-wrap" style="display:none">
+        <div class="fg"><label class="fl">Motivo do Atraso *</label><textarea class="fc" id="cbr-reason" rows="2"></textarea></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:var(--danger);margin-right:auto" onclick="delCbRec()">Excluir</button>
+      <button class="btn btn-ghost" onclick="close('m-cb-rec')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCbRec()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// SUPABASE SYNC
+// ============================================================
+const SB_URL = 'https://ytkmvgcewwllcgiptqyy.supabase.co'
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0a212Z2Nld3dsbGNnaXB0cXl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA3ODI4MTEsImV4cCI6MjA5NjM1ODgxMX0.un5kTtMw5LbuVzBdudNSmjXVoCBwabgXdmcoNm2FS9E'
+const SB_KEYS = ['ndt_emp','ndt_tr','ndt_rec','ndt_enrolls','ndt_curr','ndt_tech','ndt_cyber_c','ndt_cyber_r']
+const SB_H = { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates' }
+
+function setSyncStatus(s) {
+  const el = document.getElementById('sync-badge')
+  if (!el) return
+  const map = {
+    syncing: ['⟳  Sincronizando', '#d97706', '#fef3c7'],
+    synced:  ['✓  Sincronizado',  '#16a34a', '#dcfce7'],
+    error:   ['✗  Sem conexão',   '#dc2626', '#fee2e2'],
+  }
+  const [text, color, bg] = map[s] || ['', '#64748b', '#f1f5f9']
+  el.textContent = text
+  el.style.color = color
+  el.style.background = bg
+}
+
+async function sbLoad() {
+  try {
+    setSyncStatus('syncing')
+    const r = await fetch(`${SB_URL}/rest/v1/app_data?select=key,value`, { headers: SB_H })
+    if (!r.ok) throw new Error(await r.text())
+    const rows = await r.json()
+    rows.forEach(({key, value}) => localStorage.setItem(key, JSON.stringify(value)))
+    setSyncStatus('synced')
+  } catch(e) { console.warn('Supabase load:', e); setSyncStatus('error') }
+}
+
+let _sbTimer
+function sbPush() {
+  clearTimeout(_sbTimer)
+  _sbTimer = setTimeout(async () => {
+    const rows = SB_KEYS.map(k => ({ key: k, value: JSON.parse(localStorage.getItem(k) || '[]') }))
+    try {
+      setSyncStatus('syncing')
+      const r = await fetch(`${SB_URL}/rest/v1/app_data`, { method: 'POST', headers: SB_H, body: JSON.stringify(rows) })
+      if (!r.ok) throw new Error(await r.text())
+      setSyncStatus('synced')
+    } catch(e) { console.warn('Supabase push:', e); setSyncStatus('error') }
+  }, 1500)
+}
+
+// ============================================================
+// DATA
+// ============================================================
+const K = {E:'ndt_emp', T:'ndt_tr', R:'ndt_rec'}
+const get = k => JSON.parse(localStorage.getItem(k)||'[]')
+const set = (k,v) => { localStorage.setItem(k,JSON.stringify(v)); sbPush() }
+const DB = {
+  emps:()=>get(K.E), setEmps:v=>set(K.E,v),
+  trs:()=>get(K.T),  setTrs:v=>set(K.T,v),
+  recs:()=>get(K.R), setRecs:v=>set(K.R,v),
+}
+const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2)
+
+// ============================================================
+// STATE
+// ============================================================
+let S = { page:'dashboard', month:new Date().getMonth(), year:new Date().getFullYear() }
+let charts = {}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function addDays(iso,n){
+  const d=new Date(iso+'T12:00:00'); d.setDate(d.getDate()+n)
+  return d.toISOString().split('T')[0]
+}
+function fmt(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return `${d}/${m}/${y}` }
+function monthStr(m,y){ return new Date(y,m,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'}) }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1) }
+
+function effStatus(r){
+  if(r.status==='completed') return 'completed'
+  if(r.status==='delayed') return 'delayed'
+  const today=new Date(); today.setHours(0,0,0,0)
+  const due=new Date(r.dueDate+'T00:00:00')
+  if(today>due) return 'delayed'
+  return r.status
+}
+const SL = {completed:'Concluído',in_progress:'Em Andamento',pending:'Pendente',delayed:'Atrasado'}
+const SC = {completed:'b-done',in_progress:'b-prog',pending:'b-pend',delayed:'b-late'}
+const MC = {completed:'mc-done',in_progress:'mc-prog',pending:'mc-pend',delayed:'mc-late'}
+
+function getEmp(id){ return DB.emps().find(e=>e.id===id) }
+function getTr(id){ return DB.trs().find(t=>t.id===id) }
+
+function monthRecs(){
+  return DB.recs().filter(r=>{
+    const d=new Date(r.launchDate+'T12:00:00')
+    return d.getMonth()===S.month && d.getFullYear()===S.year
+  })
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+const PAGE_META = {
+  dashboard:   ['Dashboard','Visão geral do mês',null],
+  calendario:  ['Calendário','Prazos e datas do mês',null],
+  mapa:        ['Mapa da Equipe','Status individual por treinamento',null],
+  relatorios:  ['Relatórios','Exportações e relatórios gerenciais',null],
+  lancamentos: ['Treinamentos Mensais','Lançamentos e status do mês','+ Lançamento'],
+  padronizado: ['Treinamento Padronizado','Onboarding semanal — Semana 0 a Semana 6','+ Matricular'],
+  tecnicos:    ['Treinamentos Técnicos','Sessões apresentadas pela equipe','+ Nova Sessão'],
+  ciber:       ['Cibersegurança','Treinamentos obrigatórios de cibersegurança','+ Curso'],
+  funcionarios:['Funcionários','Gerenciar equipe','+ Funcionário'],
+  treinamentos:['Catálogo de Cursos','Catálogo de treinamentos mensais','+ Treinamento'],
+}
+
+function navigate(page){
+  S.page=page
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.toggle('active',el.dataset.page===page))
+  document.querySelectorAll('[id^="page-"]').forEach(el=>el.style.display='none')
+  document.getElementById('page-'+page).style.display='block'
+  const [title,sub,btn]=PAGE_META[page]
+  document.getElementById('page-title').innerHTML=title
+  document.getElementById('page-sub').innerHTML=sub
+  const ba=document.getElementById('btn-action')
+  if(btn){ba.innerHTML=btn;ba.style.display='flex'}else ba.style.display='none'
+  renderPage()
+}
+
+function handleAction(){
+  if(S.page==='funcionarios') openEmpModal()
+  else if(S.page==='treinamentos') openTrModal()
+  else if(S.page==='lancamentos') openLanModal()
+  else if(S.page==='padronizado') openEnrollModal()
+  else if(S.page==='tecnicos') openTechModal()
+  else if(S.page==='ciber') openCbCourseModal()
+}
+
+// ============================================================
+// MONTH NAV
+// ============================================================
+function updateML(){
+  document.getElementById('month-label').textContent=cap(monthStr(S.month,S.year))
+}
+function prevMonth(){ if(S.month===0){S.month=11;S.year--}else S.month--; updateML(); renderPage() }
+function nextMonth(){ if(S.month===11){S.month=0;S.year++}else S.month++; updateML(); renderPage() }
+function renderPage(){
+  ({dashboard:renderDash,mapa:renderMapa,calendario:renderCal,
+    funcionarios:renderEmps,treinamentos:renderTrs,lancamentos:renderLans,
+    padronizado:renderPad,tecnicos:renderTec,ciber:renderCiber,
+    relatorios:renderRelatorios})[S.page]?.()
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function renderDash(){
+  const recs=monthRecs(), n=recs.length
+  const cnt={completed:0,in_progress:0,pending:0,delayed:0}
+  recs.forEach(r=>{ const s=effStatus(r); cnt[s]=(cnt[s]||0)+1 })
+  const pct=v=>n?Math.round(v/n*100)+'%':'—'
+  document.getElementById('kv-total').textContent=n
+  document.getElementById('kv-done').textContent=cnt.completed
+  document.getElementById('ks-done').textContent=pct(cnt.completed)+' do total'
+  document.getElementById('kv-prog').textContent=cnt.in_progress
+  document.getElementById('ks-prog').textContent=pct(cnt.in_progress)+' do total'
+  document.getElementById('kv-pend').textContent=cnt.pending
+  document.getElementById('ks-pend').textContent=pct(cnt.pending)+' do total'
+  document.getElementById('kv-late').textContent=cnt.delayed
+  document.getElementById('ks-late').textContent=pct(cnt.delayed)+' do total'
+  drawStatusChart(cnt,n)
+  drawTrChart(recs)
+  renderAlerts(recs)
+  renderShifts(recs)
+}
+
+function drawStatusChart(cnt,n){
+  const wrap=document.getElementById('ch-status').parentElement
+  if(n===0){wrap.innerHTML='<div class="empty" style="padding:40px 0"><p>Nenhum dado neste m&#234;s</p></div>';return}
+  wrap.innerHTML='<canvas id="ch-status"></canvas>'
+  if(charts.st) charts.st.destroy()
+  charts.st=new Chart(document.getElementById('ch-status'),{
+    type:'doughnut',
+    data:{
+      labels:['Concluído','Em Andamento','Pendente','Atrasado'],
+      datasets:[{data:[cnt.completed,cnt.in_progress,cnt.pending,cnt.delayed],
+        backgroundColor:['#16a34a','#7c3aed','#94a3b8','#dc2626'],borderWidth:0}]
+    },
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'right',labels:{font:{size:12},padding:14,boxWidth:12}},
+        tooltip:{callbacks:{label:c=>` ${c.label}: ${c.raw} (${n?Math.round(c.raw/n*100):0}%)`}}}
+    }
+  })
+}
+
+function drawTrChart(recs){
+  const wrap=document.getElementById('ch-tr').parentElement
+  const grp={}
+  recs.forEach(r=>{
+    if(!grp[r.trainingId]) grp[r.trainingId]={tot:0,done:0}
+    grp[r.trainingId].tot++
+    if(effStatus(r)==='completed') grp[r.trainingId].done++
+  })
+  const entries=Object.entries(grp)
+  if(!entries.length){wrap.innerHTML='<div class="empty" style="padding:40px 0"><p>Nenhum treinamento lan&#231;ado</p></div>';return}
+  wrap.innerHTML='<canvas id="ch-tr"></canvas>'
+  if(charts.tr) charts.tr.destroy()
+  const labels=[],data=[],colors=[]
+  entries.forEach(([tid,g])=>{
+    const t=getTr(tid); if(!t) return
+    const p=Math.round(g.done/g.tot*100)
+    labels.push(t.name.length>22?t.name.slice(0,22)+'…':t.name)
+    data.push(p)
+    colors.push(p>=80?'#16a34a':p>=50?'#d97706':'#dc2626')
+  })
+  charts.tr=new Chart(document.getElementById('ch-tr'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'% Concluído',data,backgroundColor:colors,borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',
+      plugins:{legend:{display:false}},
+      scales:{x:{max:100,grid:{display:false},ticks:{callback:v=>v+'%',font:{size:11}}},
+              y:{grid:{display:false},ticks:{font:{size:11}}}}
+    }
+  })
+}
+
+function renderAlerts(recs){
+  const today=new Date(); today.setHours(0,0,0,0)
+  const in5=new Date(today); in5.setDate(today.getDate()+5)
+  const alerts=[]
+  recs.forEach(r=>{
+    const eff=effStatus(r),emp=getEmp(r.employeeId),tr=getTr(r.trainingId)
+    if(!emp||!tr) return
+    const due=new Date(r.dueDate+'T00:00:00')
+    if(eff==='delayed') alerts.push({type:'late',emp,tr,due,reason:r.delayReason})
+    else if((eff==='pending'||eff==='in_progress')&&due<=in5) alerts.push({type:'soon',emp,tr,due})
+  })
+  const lateN=alerts.filter(a=>a.type==='late').length
+  const badge=document.getElementById('alert-badge')
+  badge.style.display=lateN?'inline':'none'
+  badge.textContent=lateN+' atrasado'+(lateN!==1?'s':'')
+  const el=document.getElementById('alert-list')
+  if(!alerts.length){el.innerHTML='<div class="empty" style="padding:24px 0"><p>&#10003; Nenhum alerta no momento</p></div>';return}
+  el.innerHTML=alerts.slice(0,10).map(a=>`
+    <div class="alert-row">
+      <div class="alert-dot ${a.type==='late'?'ad-late':'ad-warn'}"></div>
+      <div class="alert-body">
+        <div class="alert-name">${a.emp.name}</div>
+        <div class="alert-sub">${a.tr.name} &bull; ${a.type==='late'?'Atrasado desde '+fmt(a.due.toISOString().split('T')[0]):'Vence em '+fmt(a.due.toISOString().split('T')[0])}${a.reason?' &bull; <em>'+a.reason+'</em>':''}</div>
+      </div>
+    </div>`).join('')
+}
+
+function renderShifts(recs){
+  const el=document.getElementById('shift-prog')
+  el.innerHTML=['1°','2°','3°'].map(sh=>{
+    const emps=DB.emps().filter(e=>e.shift===sh&&e.active!==false)
+    const sr=recs.filter(r=>{ const e=getEmp(r.employeeId); return e&&e.shift===sh })
+    const tot=sr.length, done=sr.filter(r=>effStatus(r)==='completed').length
+    const p=tot?Math.round(done/tot*100):0
+    const col=p>=80?'var(--success)':p>=50?'var(--warning)':'var(--danger)'
+    return `<div style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:700;margin-bottom:5px">
+        <span>${sh} Turno <span style="font-weight:400;color:var(--muted);font-size:12px">(${emps.length} func.)</span></span>
+        <span style="color:${col}">${p}% &bull; ${done}/${tot}</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${p}%;background:${col}"></div></div>
+    </div>`
+  }).join('')
+}
+
+// ============================================================
+// MAPA
+// ============================================================
+function renderMapa(){
+  document.getElementById('mapa-month').innerHTML=cap(monthStr(S.month,S.year))
+  const sh=document.getElementById('map-shift').value
+  const recs=monthRecs()
+  let emps=DB.emps().filter(e=>e.active!==false)
+  if(sh) emps=emps.filter(e=>e.shift===sh)
+  const tidSet=[...new Set(recs.map(r=>r.trainingId))]
+  const trs=tidSet.map(id=>getTr(id)).filter(Boolean)
+  const el=document.getElementById('mapa-body')
+  if(!emps.length){el.innerHTML='<div class="empty"><p>Nenhum funcion&#225;rio cadastrado.</p></div>';return}
+  if(!trs.length){el.innerHTML='<div class="empty"><p>Nenhum treinamento lan&#231;ado neste m&#234;s.</p></div>';return}
+  // build map emp→tr→rec (most recent)
+  const map={}
+  recs.forEach(r=>{
+    if(!map[r.employeeId]) map[r.employeeId]={}
+    const ex=map[r.employeeId][r.trainingId]
+    if(!ex||r.launchDate>ex.launchDate) map[r.employeeId][r.trainingId]=r
+  })
+  el.innerHTML=`<table class="map-table">
+    <thead><tr>
+      <th class="emp-col">Funcion&#225;rio</th>
+      ${trs.map(t=>`<th title="${t.name}">${t.name.length>14?t.name.slice(0,14)+'…':t.name}</th>`).join('')}
+    </tr></thead>
+    <tbody>${emps.map(emp=>`<tr>
+      <td class="emp-col"><div class="emp-name">${emp.name}</div><div class="emp-shift">${emp.shift} T. &bull; ${emp.role||''}</div></td>
+      ${trs.map(tr=>{
+        const rec=map[emp.id]?.[tr.id]
+        if(!rec) return '<td><span style="color:#ddd">—</span></td>'
+        const eff=effStatus(rec), title=eff==='delayed'&&rec.delayReason?'Motivo: '+rec.delayReason:''
+        return `<td><span class="map-cell ${MC[eff]}" title="${title}" onclick="openRecModal('${rec.id}')">${SL[eff]}</span></td>`
+      }).join('')}
+    </tr>`).join('')}</tbody>
+  </table>`
+}
+
+// ============================================================
+// CALENDAR
+// ============================================================
+function renderCal(){
+  const y=S.year, m=S.month
+  const firstDow=new Date(y,m,1).getDay()
+  const dim=new Date(y,m+1,0).getDate()
+  const today=new Date()
+  // group records by dueDate day in this month
+  const byDay={}
+  DB.recs().forEach(r=>{
+    const d=new Date(r.dueDate+'T00:00:00')
+    if(d.getMonth()===m&&d.getFullYear()===y){
+      const n=d.getDate()
+      if(!byDay[n]) byDay[n]=[]
+      byDay[n].push(r)
+    }
+  })
+  const DAYS=['Dom','Seg','Ter','Qua','Qui','Sex','S&#225;b']
+  let html=`<div class="cal-grid">
+    ${DAYS.map(d=>`<div class="cal-dh">${d}</div>`).join('')}
+    ${'<div class="cal-day empty"></div>'.repeat(firstDow)}`
+  for(let d=1;d<=dim;d++){
+    const isToday=today.getDate()===d&&today.getMonth()===m&&today.getFullYear()===y
+    const dayRecs=byDay[d]||[]
+    // group by training
+    const tgrp={}
+    dayRecs.forEach(r=>{ if(!tgrp[r.trainingId]) tgrp[r.trainingId]=[]; tgrp[r.trainingId].push(r) })
+    const keys=Object.keys(tgrp)
+    const evs=keys.slice(0,3).map(tid=>{
+      const t=getTr(tid); if(!t) return ''
+      const sts=tgrp[tid].map(r=>effStatus(r))
+      const worst=sts.includes('delayed')?'late':sts.includes('pending')?'pend':sts.includes('in_progress')?'prog':'done'
+      return `<div class="cal-ev ce-${worst}" title="${t.name}">${t.name.length>14?t.name.slice(0,14)+'…':t.name} (${tgrp[tid].length})</div>`
+    }).join('')
+    const more=keys.length>3?`<div style="font-size:10px;color:var(--muted)">+${keys.length-3} mais</div>`:''
+    const dn=isToday?`<div class="cal-dn">${d}</div>`:`<div class="cal-dn" style="color:var(--muted)">${d}</div>`
+    html+=`<div class="cal-day${isToday?' today':''}">${dn}${evs}${more}</div>`
+  }
+  html+='</div>'
+  document.getElementById('cal-body').innerHTML=html
+}
+
+// ============================================================
+// FUNCIONÁRIOS
+// ============================================================
+function renderEmps(){
+  const emps=DB.emps()
+  const el=document.getElementById('emp-body')
+  if(!emps.length){el.innerHTML=`<div class="empty"><h3>Nenhum funcion&#225;rio cadastrado</h3><p>Clique em "+ Funcion&#225;rio" para adicionar</p></div>`;return}
+  el.innerHTML=`<table>
+    <thead><tr><th>Nome</th><th>Turno</th><th>Fun&#231;&#227;o</th><th>Status</th><th style="text-align:right">A&#231;&#245;es</th></tr></thead>
+    <tbody>${emps.map(e=>`<tr>
+      <td style="font-weight:700">${e.name}</td>
+      <td>${e.shift} Turno</td>
+      <td style="color:var(--muted)">${e.role||'—'}</td>
+      <td><span class="badge ${e.active!==false?'b-done':'b-pend'}">${e.active!==false?'Ativo':'Inativo'}</span></td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="openEmpModal('${e.id}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:4px" onclick="delEmp('${e.id}')">Excluir</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`
+}
+
+function openEmpModal(id){
+  document.getElementById('e-id').value=''
+  document.getElementById('e-name').value=''
+  document.getElementById('e-role').value=''
+  document.getElementById('e-shift').value='1°'
+  document.getElementById('m-emp-title').textContent='Novo Funcionário'
+  if(id){
+    const e=getEmp(id); if(!e) return
+    document.getElementById('m-emp-title').textContent='Editar Funcionário'
+    document.getElementById('e-id').value=e.id
+    document.getElementById('e-name').value=e.name
+    document.getElementById('e-role').value=e.role||''
+    document.getElementById('e-shift').value=e.shift
+  }
+  open('m-emp')
+}
+
+function saveEmp(){
+  const name=document.getElementById('e-name').value.trim()
+  if(!name){alert('Nome é obrigatório');return}
+  const id=document.getElementById('e-id').value
+  const emps=DB.emps()
+  const data={name,role:document.getElementById('e-role').value.trim(),shift:document.getElementById('e-shift').value,active:true}
+  if(id){ const i=emps.findIndex(e=>e.id===id); if(i>=0) emps[i]={...emps[i],...data} }
+  else emps.push({id:uid(),...data})
+  DB.setEmps(emps); close('m-emp'); renderEmps()
+}
+
+function delEmp(id){
+  if(!confirm('Excluir funcionário? Os registros relacionados também serão removidos.')) return
+  DB.setEmps(DB.emps().filter(e=>e.id!==id))
+  DB.setRecs(DB.recs().filter(r=>r.employeeId!==id))
+  renderEmps()
+}
+
+// ============================================================
+// TREINAMENTOS
+// ============================================================
+function renderTrs(){
+  const trs=DB.trs()
+  const el=document.getElementById('tr-body')
+  if(!trs.length){el.innerHTML=`<div class="empty"><h3>Nenhum treinamento cadastrado</h3><p>Clique em "+ Treinamento" para adicionar</p></div>`;return}
+  el.innerHTML=`<table>
+    <thead><tr><th>Nome</th><th>Categoria</th><th style="text-align:right">A&#231;&#245;es</th></tr></thead>
+    <tbody>${trs.map(t=>`<tr>
+      <td style="font-weight:700">${t.name}</td>
+      <td><span class="badge cat-${t.category.replace('ç','&#231;').replace('á','&#225;').replace('ó','&#243;').replace('â','&#226;')}">${t.category}</span></td>
+      <td style="text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="openTrModal('${t.id}')">Editar</button>
+        <button class="btn btn-ghost btn-sm" style="color:var(--danger);margin-left:4px" onclick="delTr('${t.id}')">Excluir</button>
+      </td>
+    </tr>`).join('')}</tbody>
+  </table>`
+}
+
+function openTrModal(id){
+  document.getElementById('t-id').value=''
+  document.getElementById('t-name').value=''
+  document.getElementById('t-cat').value='Qualidade'
+  document.getElementById('m-tr-title').textContent='Novo Treinamento'
+  if(id){
+    const t=getTr(id); if(!t) return
+    document.getElementById('m-tr-title').textContent='Editar Treinamento'
+    document.getElementById('t-id').value=t.id
+    document.getElementById('t-name').value=t.name
+    document.getElementById('t-cat').value=t.category
+  }
+  open('m-tr')
+}
+
+function saveTr(){
+  const name=document.getElementById('t-name').value.trim()
+  if(!name){alert('Nome é obrigatório');return}
+  const id=document.getElementById('t-id').value
+  const trs=DB.trs()
+  const data={name,category:document.getElementById('t-cat').value}
+  if(id){ const i=trs.findIndex(t=>t.id===id); if(i>=0) trs[i]={...trs[i],...data} }
+  else trs.push({id:uid(),...data})
+  DB.setTrs(trs); close('m-tr'); renderTrs()
+}
+
+function delTr(id){
+  if(!confirm('Excluir treinamento?')) return
+  DB.setTrs(DB.trs().filter(t=>t.id!==id)); renderTrs()
+}
+
+// ============================================================
+// LANÇAMENTOS
+// ============================================================
+function renderLans(){
+  const recs=monthRecs()
+  const el=document.getElementById('lan-body')
+  if(!recs.length){
+    el.innerHTML=`<div class="card"><div class="card-body"><div class="empty"><h3>Nenhum lan&#231;amento neste m&#234;s</h3><p>Clique em "+ Lan&#231;amento" para registrar treinamentos</p></div></div></div>`
+    return
+  }
+  // group by trainingId+launchDate
+  const grps={}
+  recs.forEach(r=>{
+    const k=r.trainingId+'_'+r.launchDate
+    if(!grps[k]) grps[k]={tid:r.trainingId,ld:r.launchDate,dd:r.dueDate,recs:[]}
+    grps[k].recs.push(r)
+  })
+  el.innerHTML=Object.values(grps).sort((a,b)=>b.ld.localeCompare(a.ld)).map(g=>{
+    const tr=getTr(g.tid)
+    const tot=g.recs.length
+    const done=g.recs.filter(r=>effStatus(r)==='completed').length
+    const late=g.recs.filter(r=>effStatus(r)==='delayed').length
+    const p=Math.round(done/tot*100)
+    const col=p>=80?'var(--success)':p>=50?'var(--warning)':'var(--danger)'
+    return `<div class="launch-group">
+      <div class="launch-group-header">
+        <div><div class="lg-title">${tr?.name||'Treinamento removido'}</div>
+          <div class="lg-meta">Lan&#231;ado ${fmt(g.ld)} &bull; Prazo ${fmt(g.dd)}${late?` &bull; <span style="color:var(--danger);font-weight:700">${late} atrasado${late!==1?'s':''}</span>`:''}</div>
+        </div>
+        <div class="lg-stat"><div class="lg-pct" style="color:${col}">${p}%</div><div class="lg-sub">${done}/${tot} conclu&#237;dos</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Funcion&#225;rio</th><th>Turno</th><th>Status</th><th>Conclus&#227;o / Motivo</th><th style="text-align:right">A&#231;&#227;o</th></tr></thead>
+        <tbody>${g.recs.map(r=>{
+          const emp=getEmp(r.employeeId); const eff=effStatus(r)
+          return `<tr>
+            <td style="font-weight:700">${emp?.name||'Removido'}</td>
+            <td>${emp?.shift||'—'} T.</td>
+            <td><span class="badge ${SC[eff]}">${SL[eff]}</span></td>
+            <td style="font-size:12px;color:var(--muted);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              ${r.completedDate?fmt(r.completedDate):r.delayReason?'<em style="color:var(--danger)">'+r.delayReason+'</em>':'—'}
+            </td>
+            <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="openRecModal('${r.id}')">Atualizar</button></td>
+          </tr>`
+        }).join('')}</tbody>
+      </table>
+    </div>`
+  }).join('')
+}
+
+function openLanModal(){
+  const trs=DB.trs(), emps=DB.emps().filter(e=>e.active!==false)
+  if(!trs.length){alert('Cadastre ao menos um treinamento antes de lançar.');navigate('treinamentos');return}
+  if(!emps.length){alert('Cadastre ao menos um funcionário antes de lançar.');navigate('funcionarios');return}
+  document.getElementById('l-tr').innerHTML=trs.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')
+  const td=new Date().toISOString().split('T')[0]
+  document.getElementById('l-date').value=td
+  calcDue()
+  document.getElementById('l-emps').innerHTML=emps.map(e=>`
+    <label class="emp-check"><input type="checkbox" value="${e.id}" checked><span>${e.name} <span style="color:var(--muted)">(${e.shift}T)</span></span></label>`).join('')
+  document.querySelectorAll('.shift-btn').forEach((b,i)=>b.classList.toggle('on',i===0))
+  open('m-lan')
+}
+
+function calcDue(){
+  const ld=document.getElementById('l-date').value
+  if(ld){ const dd=addDays(ld,20); document.getElementById('l-due').value=fmt(dd); document.getElementById('l-due').dataset.iso=dd }
+}
+
+function selShift(btn,sh){
+  document.querySelectorAll('.shift-btn').forEach(b=>b.classList.remove('on'))
+  btn.classList.add('on')
+  document.querySelectorAll('#l-emps input').forEach(cb=>{
+    const e=getEmp(cb.value); cb.checked=sh===''?true:e?.shift===sh
+  })
+}
+
+function saveLan(){
+  const tid=document.getElementById('l-tr').value
+  const ld=document.getElementById('l-date').value
+  const dd=document.getElementById('l-due').dataset.iso
+  if(!ld){alert('Informe a data de lançamento');return}
+  const sel=[...document.querySelectorAll('#l-emps input:checked')].map(c=>c.value)
+  if(!sel.length){alert('Selecione ao menos um funcionário');return}
+  const recs=DB.recs()
+  sel.forEach(eid=>{
+    const ex=recs.find(r=>r.employeeId===eid&&r.trainingId===tid&&r.launchDate===ld)
+    if(!ex) recs.push({id:uid(),employeeId:eid,trainingId:tid,launchDate:ld,dueDate:dd,status:'pending',completedDate:null,delayReason:null})
+  })
+  DB.setRecs(recs); close('m-lan'); renderLans()
+}
+
+// ============================================================
+// RECORD STATUS
+// ============================================================
+function openRecModal(id){
+  const rec=DB.recs().find(r=>r.id===id); if(!rec) return
+  const emp=getEmp(rec.employeeId), tr=getTr(rec.trainingId)
+  document.getElementById('r-id').value=id
+  document.getElementById('r-info').innerHTML=`<strong>${emp?.name||'?'}</strong> &bull; ${tr?.name||'?'}<br><span style="color:var(--muted)">Prazo: ${fmt(rec.dueDate)}</span>`
+  const eff=effStatus(rec)
+  document.getElementById('r-status').value=eff==='delayed'&&rec.status!=='delayed'?'delayed':rec.status
+  document.getElementById('r-done-date').value=rec.completedDate||''
+  document.getElementById('r-reason').value=rec.delayReason||''
+  toggleRec(); open('m-rec')
+}
+
+function toggleRec(){
+  const st=document.getElementById('r-status').value
+  document.getElementById('r-done-wrap').style.display=st==='completed'?'block':'none'
+  document.getElementById('r-late-wrap').style.display=st==='delayed'?'block':'none'
+}
+
+function saveRec(){
+  const id=document.getElementById('r-id').value
+  const st=document.getElementById('r-status').value
+  if(st==='completed'&&!document.getElementById('r-done-date').value){alert('Informe a data de conclusão');return}
+  if(st==='delayed'&&!document.getElementById('r-reason').value.trim()){alert('Informe o motivo do atraso');return}
+  const recs=DB.recs()
+  const i=recs.findIndex(r=>r.id===id)
+  if(i>=0){
+    recs[i].status=st
+    recs[i].completedDate=st==='completed'?document.getElementById('r-done-date').value:null
+    recs[i].delayReason=st==='delayed'?document.getElementById('r-reason').value.trim():null
+  }
+  DB.setRecs(recs); close('m-rec'); renderPage()
+}
+
+function delRec(){
+  const id=document.getElementById('r-id').value
+  if(!confirm('Excluir este registro?')) return
+  DB.setRecs(DB.recs().filter(r=>r.id!==id)); close('m-rec'); renderPage()
+}
+
+// ============================================================
+// MODAL HELPERS
+// ============================================================
+function open(id){ document.getElementById(id).classList.add('open') }
+function close(id){ document.getElementById(id).classList.remove('open') }
+document.querySelectorAll('.modal-bg').forEach(bg=>bg.addEventListener('click',e=>{if(e.target===bg)bg.classList.remove('open')}))
+document.addEventListener('keydown',e=>{if(e.key==='Escape') document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'))})
+
+// ============================================================
+// PADRONIZADO (ONBOARDING)
+// ============================================================
+const STD_DAYS = ['Segunda','Terça','Quarta','Quinta','Sexta']
+const DEFAULT_CURR = {
+  W0D0:'Apresentação da empresa e área de CQ',W0D1:'Normas internas e código de conduta',W0D2:'EPI e segurança no trabalho',W0D3:'Visita guiada às instalações',W0D4:'Sistemas e ferramentas do setor',
+  W1D0:'Gestão de documentos e registros',W1D1:'Leitura e interpretação de procedimentos',W1D2:'Preenchimento de formulários CQ',W1D3:'Sistema de controle de documentos',W1D4:'Avaliação — Documentação',
+  W2D0:'Conceitos de BPF',W2D1:'Higienização e controle de contaminação',W2D2:'Rastreabilidade de produtos e lotes',W2D3:'Inspeção no processo produtivo',W2D4:'Avaliação — BPF',
+  W3D0:'Introdução à ISO 13485 e ANVISA',W3D1:'Gestão de não conformidades',W3D2:'Ações corretivas e preventivas (CAPA)',W3D3:'Auditoria interna e vigilância',W3D4:'Avaliação — ISO 13485',
+  W4D0:'Técnicas de inspeção visual',W4D1:'Uso de instrumentos de medição',W4D2:'Critérios de aceitação e rejeição',W4D3:'Amostragem e planos de inspeção',W4D4:'Prática supervisionada',
+  W5D0:'Revisão geral dos conteúdos',W5D1:'Simulação de cenários reais',W5D2:'Resolução de problemas e desvios',W5D3:'Documentação de resultados',W5D4:'Avaliação prática final',
+  W6D0:'Feedback e ajustes individuais',W6D1:'Treinamento específico da função',W6D2:'Conhecimento dos equipamentos',W6D3:'Assinatura dos documentos',W6D4:'Validação e liberação para operação',
+}
+const getCurr = () => { const s=localStorage.getItem('ndt_curr'); return s?JSON.parse(s):{...DEFAULT_CURR} }
+const setCurr = v => localStorage.setItem('ndt_curr', JSON.stringify(v))
+const getEnrolls = () => JSON.parse(localStorage.getItem('ndt_enrolls')||'[]')
+const setEnrolls = v => localStorage.setItem('ndt_enrolls', JSON.stringify(v))
+
+let pdTab = 'mat', pdEnrollId = null
+
+function renderPad() {
+  const enrolls = getEnrolls()
+  const total = enrolls.length
+  const done = enrolls.filter(e => Object.keys(e.completedSlots||{}).filter(k=>e.completedSlots[k]).length === 35).length
+  const prog = total - done
+  const avgs = enrolls.map(e => Math.round(Object.keys(e.completedSlots||{}).filter(k=>e.completedSlots[k]).length / 35 * 100))
+  const avg = avgs.length ? Math.round(avgs.reduce((a,b)=>a+b,0)/avgs.length) : 0
+  document.getElementById('pd-kv1').textContent = total
+  document.getElementById('pd-kv2').textContent = done
+  document.getElementById('pd-kv3').textContent = prog
+  document.getElementById('pd-kv4').textContent = avg + '%'
+  if (pdTab === 'mat') {
+    if (pdEnrollId) renderPdDetail(pdEnrollId)
+    else renderPdList()
+  } else {
+    renderPdProg()
+  }
+}
+
+function switchPdTab(tab, el) {
+  pdTab = tab; pdEnrollId = null
+  document.querySelectorAll('#pd-tabs .tab').forEach(t => t.classList.remove('on'))
+  el.classList.add('on')
+  document.getElementById('pd-mat').style.display = tab === 'mat' ? 'block' : 'none'
+  document.getElementById('pd-prog').style.display = tab === 'prog' ? 'block' : 'none'
+  if (tab === 'mat') renderPdList()
+  else renderPdProg()
+}
+
+function renderPdList() {
+  pdEnrollId = null
+  document.getElementById('pd-back').style.display = 'none'
+  document.getElementById('pd-detail').style.display = 'none'
+  document.getElementById('pd-list').style.display = 'block'
+  const enrolls = getEnrolls()
+  const el = document.getElementById('pd-list')
+  if (!enrolls.length) { el.innerHTML = '<div class="empty"><h3>Nenhuma matrícula</h3><p>Clique em "+ Matricular" para iniciar o onboarding de um funcionário.</p></div>'; return }
+  el.innerHTML = enrolls.map(en => {
+    const emp = getEmp(en.employeeId)
+    const slots = en.completedSlots || {}
+    const done = Object.keys(slots).filter(k => slots[k]).length
+    const pct = Math.round(done / 35 * 100)
+    const today = new Date(); today.setHours(0,0,0,0)
+    const start = new Date(en.startDate + 'T00:00:00')
+    const weeksIn = Math.min(6, Math.floor((today - start) / (7*24*3600*1000)))
+    const col = pct >= 80 ? 'var(--success)' : pct >= 40 ? 'var(--warning)' : 'var(--danger)'
+    return `<div class="enroll-card" onclick="showPdDetail('${en.id}')">
+      <div class="enroll-info">
+        <div class="enroll-name">${emp?.name || '?'}</div>
+        <div class="enroll-meta">${emp?.shift || '?'} Turno &bull; Início: ${fmt(en.startDate)} &bull; Semana atual: ${weeksIn}</div>
+        <div class="prog-bar" style="margin-top:8px"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px">${done}/35 dias concluídos (${pct}%)</div>
+      </div>
+      <div style="font-size:22px;font-weight:900;color:${col}">${pct}%</div>
+    </div>`
+  }).join('')
+}
+
+function showPdDetail(enrollId) {
+  pdEnrollId = enrollId
+  document.getElementById('pd-back').style.display = 'flex'
+  document.getElementById('pd-list').style.display = 'none'
+  document.getElementById('pd-detail').style.display = 'block'
+  renderPdDetail(enrollId)
+}
+
+function showPdList() { renderPdList() }
+
+function renderPdDetail(enrollId) {
+  const en = getEnrolls().find(e => e.id === enrollId)
+  if (!en) return
+  const emp = getEmp(en.employeeId)
+  const slots = en.completedSlots || {}
+  const curr = getCurr()
+  const today = new Date(); today.setHours(0,0,0,0)
+  let html = `<div class="card"><div class="card-header">
+    <div><div style="font-weight:800;font-size:15px">${emp?.name || '?'}</div>
+    <div style="font-size:12px;color:var(--muted)">${emp?.shift} Turno &bull; Início: ${fmt(en.startDate)} &bull; Função: ${emp?.role||'—'}</div></div>
+    <button class="btn btn-ghost btn-sm no-print" onclick="delEnroll('${enrollId}')">Excluir matrícula</button>
+  </div><div class="card-body wk-wrap"><table class="wk-table">
+  <thead><tr><th class="wk-lbl">Semana</th>${STD_DAYS.map(d=>`<th>${d}</th>`).join('')}</tr></thead><tbody>`
+  for (let w = 0; w < 7; w++) {
+    html += `<tr><td class="wk-lbl" style="padding:8px;font-weight:700;font-size:12px">Sem. ${w}</td>`
+    for (let d = 0; d < 5; d++) {
+      const key = `W${w}D${d}`
+      const isDone = !!slots[key]
+      const expDate = new Date(addDays(en.startDate, w*7+d) + 'T00:00:00')
+      const isPast = expDate <= today
+      const cls = isDone ? 'wk-done' : isPast ? 'wk-todo' : 'wk-fut'
+      const icon = isDone ? '✓' : isPast ? '○' : '·'
+      const topic = (curr[key] || '').slice(0, 30)
+      html += `<td><div class="${cls} wk-cell" onclick="toggleSlot('${enrollId}','${key}')"><span class="wk-check">${icon}</span><span class="wk-topic">${topic}</span></div></td>`
+    }
+    html += '</tr>'
+  }
+  html += '</tbody></table></div></div>'
+  document.getElementById('pd-detail').innerHTML = html
+}
+
+function toggleSlot(enrollId, key) {
+  const enrolls = getEnrolls()
+  const en = enrolls.find(e => e.id === enrollId)
+  if (!en) return
+  if (!en.completedSlots) en.completedSlots = {}
+  en.completedSlots[key] = !en.completedSlots[key]
+  setEnrolls(enrolls)
+  renderPdDetail(enrollId)
+  renderPad()
+}
+
+function renderPdProg() {
+  const curr = getCurr()
+  let html = '<div class="wk-wrap"><table class="wk-table"><thead><tr><th class="wk-lbl">Semana</th>' + STD_DAYS.map(d=>`<th>${d}</th>`).join('') + '</tr></thead><tbody>'
+  const titles = ['Integração','Documentação','BPF','ISO 13485','Inspeção','Qualificação','Finalização']
+  for (let w = 0; w < 7; w++) {
+    html += `<tr><td class="wk-lbl" style="padding:8px"><div style="font-weight:700;font-size:12px">Sem. ${w}</div><div style="font-size:10px;color:var(--muted)">${titles[w]}</div></td>`
+    for (let d = 0; d < 5; d++) {
+      const key = `W${w}D${d}`
+      const topic = curr[key] || ''
+      html += `<td><div style="padding:6px;font-size:11px;min-height:58px;cursor:pointer" onclick="openTopicEdit('${key}')" title="Clique para editar">${topic}<div style="font-size:9px;color:var(--muted);margin-top:4px">✏ editar</div></div></td>`
+    }
+    html += '</tr>'
+  }
+  html += '</tbody></table></div>'
+  document.getElementById('pd-prog-grid').innerHTML = html
+}
+
+function openEnrollModal() {
+  const emps = DB.emps().filter(e => e.active !== false)
+  if (!emps.length) { alert('Cadastre funcionários primeiro.'); return }
+  document.getElementById('en-emp').innerHTML = emps.map(e => `<option value="${e.id}">${e.name} (${e.shift} T.)</option>`).join('')
+  document.getElementById('en-date').value = new Date().toISOString().split('T')[0]
+  open('m-enroll')
+}
+
+function saveEnroll() {
+  const empId = document.getElementById('en-emp').value
+  const date = document.getElementById('en-date').value
+  if (!date) { alert('Informe a data de início'); return }
+  const enrolls = getEnrolls()
+  if (enrolls.find(e => e.employeeId === empId)) { alert('Este funcionário já está matriculado.'); return }
+  enrolls.push({ id: uid(), employeeId: empId, startDate: date, completedSlots: {} })
+  setEnrolls(enrolls); close('m-enroll'); renderPad()
+}
+
+function delEnroll(enrollId) {
+  if (!confirm('Excluir matrícula? O progresso será perdido.')) return
+  setEnrolls(getEnrolls().filter(e => e.id !== enrollId))
+  showPdList(); renderPad()
+}
+
+function openTopicEdit(key) {
+  const curr = getCurr()
+  const days = ['Segunda','Terça','Quarta','Quinta','Sexta']
+  const w = key[1], d = key[3]
+  document.getElementById('m-topic-title').textContent = `Semana ${w} — ${days[d]}`
+  document.getElementById('tp-key').value = key
+  document.getElementById('tp-val').value = curr[key] || ''
+  open('m-topic')
+}
+
+function saveTopic() {
+  const key = document.getElementById('tp-key').value
+  const val = document.getElementById('tp-val').value.trim()
+  const curr = getCurr()
+  curr[key] = val
+  setCurr(curr); close('m-topic'); renderPdProg()
+}
+
+function resetCurr() {
+  if (!confirm('Restaurar o programa padrão? Suas edições serão perdidas.')) return
+  localStorage.removeItem('ndt_curr'); renderPdProg()
+}
+
+// ============================================================
+// TÉCNICOS
+// ============================================================
+const getTechs = () => JSON.parse(localStorage.getItem('ndt_tech')||'[]')
+const setTechs = v => localStorage.setItem('ndt_tech', JSON.stringify(v))
+
+function renderTec() {
+  const sessions = getTechs().sort((a,b) => b.date.localeCompare(a.date))
+  const total = sessions.length
+  const parts = sessions.reduce((s, t) => s + (t.attendees?.length||0), 0)
+  const avg = total ? Math.round(parts / total) : 0
+  document.getElementById('tc-kv1').textContent = total
+  document.getElementById('tc-kv2').textContent = parts
+  document.getElementById('tc-kv3').textContent = avg
+  const el = document.getElementById('tc-body')
+  if (!sessions.length) { el.innerHTML = '<div class="card"><div class="card-body"><div class="empty"><h3>Nenhuma sessão registrada</h3><p>Clique em "+ Nova Sessão" para registrar.</p></div></div></div>'; return }
+  const catCol = {Qualidade:'#2563eb',Segurança:'#d97706',Regulatório:'#7c3aed',Processo:'#16a34a',Geral:'#64748b'}
+  el.innerHTML = sessions.map(s => {
+    const atts = (s.attendees||[]).map(id => getEmp(id)?.name).filter(Boolean)
+    const col = catCol[s.category] || '#64748b'
+    return `<div class="session-card">
+      <div class="session-head">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div style="width:3px;border-radius:2px;background:${col};align-self:stretch;flex-shrink:0"></div>
+          <div>
+            <div style="font-weight:800;font-size:14px">${s.title}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px">${fmt(s.date)} &bull; ${s.presenterName} &bull; ${s.durationH}h &bull; <span style="color:${col};font-weight:600">${s.category}</span></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="badge b-info">${s.attendees?.length||0} participantes</span>
+          <button class="btn btn-ghost btn-sm no-print" onclick="openTechModal('${s.id}')">Editar</button>
+        </div>
+      </div>
+      ${s.description||atts.length ? `<div class="session-detail">
+        ${s.description ? `<div style="font-size:13px;color:var(--muted);margin-bottom:8px">${s.description}</div>` : ''}
+        ${atts.length ? `<div style="font-size:12px"><strong>Participantes:</strong> ${atts.join(', ')}</div>` : ''}
+      </div>` : ''}
+    </div>`
+  }).join('')
+}
+
+function openTechModal(id) {
+  const emps = DB.emps().filter(e => e.active !== false)
+  document.getElementById('th-id').value = ''
+  document.getElementById('th-title').value = ''
+  document.getElementById('th-cat').value = 'Qualidade'
+  document.getElementById('th-date').value = new Date().toISOString().split('T')[0]
+  document.getElementById('th-pres').value = ''
+  document.getElementById('th-dur').value = '1'
+  document.getElementById('th-desc').value = ''
+  document.getElementById('th-del-btn').style.display = 'none'
+  document.getElementById('m-tech-title').textContent = 'Nova Sessão Técnica'
+  document.getElementById('th-emps').innerHTML = emps.map(e => `<label class="emp-check"><input type="checkbox" value="${e.id}"><span>${e.name} (${e.shift}T)</span></label>`).join('')
+  document.querySelectorAll('#m-tech .shift-btn').forEach((b,i) => b.classList.toggle('on', i === 0))
+  if (id) {
+    const s = getTechs().find(t => t.id === id)
+    if (s) {
+      document.getElementById('m-tech-title').textContent = 'Editar Sessão Técnica'
+      document.getElementById('th-id').value = s.id
+      document.getElementById('th-title').value = s.title
+      document.getElementById('th-cat').value = s.category
+      document.getElementById('th-date').value = s.date
+      document.getElementById('th-pres').value = s.presenterName
+      document.getElementById('th-dur').value = s.durationH
+      document.getElementById('th-desc').value = s.description || ''
+      document.getElementById('th-del-btn').style.display = 'inline-flex'
+      document.querySelectorAll('#th-emps input').forEach(cb => { cb.checked = (s.attendees||[]).includes(cb.value) })
+    }
+  }
+  open('m-tech')
+}
+
+function saveTech() {
+  const title = document.getElementById('th-title').value.trim()
+  if (!title) { alert('Informe o título'); return }
+  const attendees = [...document.querySelectorAll('#th-emps input:checked')].map(c => c.value)
+  const data = {
+    title, category: document.getElementById('th-cat').value,
+    date: document.getElementById('th-date').value,
+    presenterName: document.getElementById('th-pres').value.trim() || '—',
+    durationH: parseFloat(document.getElementById('th-dur').value) || 1,
+    description: document.getElementById('th-desc').value.trim(),
+    attendees,
+  }
+  const id = document.getElementById('th-id').value
+  const sessions = getTechs()
+  if (id) { const i = sessions.findIndex(s => s.id === id); if (i >= 0) sessions[i] = {...sessions[i], ...data} }
+  else sessions.push({id: uid(), ...data})
+  setTechs(sessions); close('m-tech'); renderTec()
+}
+
+function deleteTech() {
+  const id = document.getElementById('th-id').value
+  if (!confirm('Excluir sessão?')) return
+  setTechs(getTechs().filter(s => s.id !== id)); close('m-tech'); renderTec()
+}
+
+// ============================================================
+// CIBERSEGURANÇA
+// ============================================================
+const getCbCourses = () => JSON.parse(localStorage.getItem('ndt_cyber_c')||'[]')
+const setCbCourses = v => localStorage.setItem('ndt_cyber_c', JSON.stringify(v))
+const getCbRecs = () => JSON.parse(localStorage.getItem('ndt_cyber_r')||'[]')
+const setCbRecs = v => localStorage.setItem('ndt_cyber_r', JSON.stringify(v))
+
+function renderCiber() {
+  const courses = getCbCourses(), recs = getCbRecs()
+  const total = recs.length
+  const cnt = {completed:0,in_progress:0,pending:0,delayed:0}
+  recs.forEach(r => { const s=effStatus(r); cnt[s]=(cnt[s]||0)+1 })
+  document.getElementById('cb-kv1').textContent = courses.length
+  document.getElementById('cb-kv2').textContent = cnt.completed
+  document.getElementById('cb-kv3').textContent = cnt.in_progress
+  document.getElementById('cb-kv4').textContent = cnt.pending
+  document.getElementById('cb-kv5').textContent = cnt.delayed
+  const el = document.getElementById('cb-body')
+  if (!courses.length) { el.innerHTML = '<div class="card"><div class="card-body"><div class="empty"><h3>Nenhum curso cadastrado</h3><p>Clique em "+ Curso" para adicionar.</p></div></div></div>'; return }
+  el.innerHTML = courses.map(c => {
+    const courseRecs = recs.filter(r => r.courseId === c.id)
+    const tot = courseRecs.length, done = courseRecs.filter(r => effStatus(r)==='completed').length
+    const pct = tot ? Math.round(done/tot*100) : 0
+    const col = pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'
+    return `<div class="cyber-course">
+      <div class="cyber-head">
+        <div>
+          <div style="font-weight:800;font-size:14px">${c.name} ${c.mandatory?'<span class="badge b-late" style="font-size:10px">Obrigatório</span>':''}</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:2px">${c.provider||'—'} &bull; Prazo: ${fmt(c.dueDate)}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="text-align:right"><div style="font-size:20px;font-weight:900;color:${col}">${pct}%</div><div style="font-size:11px;color:var(--muted)">${done}/${tot}</div></div>
+          <button class="btn btn-ghost btn-sm no-print" onclick="openCbLanModal('${c.id}')">+ Lançar</button>
+          <button class="btn btn-ghost btn-sm no-print" onclick="openCbCourseModal('${c.id}')">Editar</button>
+        </div>
+      </div>
+      ${courseRecs.length ? `<table><thead><tr><th>Funcionário</th><th>Turno</th><th>Status</th><th>Conclusão</th><th>Pontuação</th><th style="text-align:right">Ação</th></tr></thead><tbody>
+        ${courseRecs.map(r => {
+          const emp = getEmp(r.employeeId), eff = effStatus(r)
+          const scoreHtml = r.score != null ? `<span class="${r.score>=80?'score-hi':r.score>=60?'score-mid':'score-lo'}">${r.score}</span>` : '—'
+          return `<tr><td style="font-weight:700">${emp?.name||'?'}</td><td>${emp?.shift||'?'} T.</td>
+            <td><span class="badge ${SC[eff]}">${SL[eff]}</span></td>
+            <td style="font-size:12px">${r.completedDate?fmt(r.completedDate):r.delayReason?`<em style="color:var(--danger)">${r.delayReason.slice(0,30)}</em>`:'—'}</td>
+            <td>${scoreHtml}</td>
+            <td style="text-align:right"><button class="btn btn-ghost btn-sm no-print" onclick="openCbRecModal('${r.id}')">Atualizar</button></td>
+          </tr>`
+        }).join('')}
+      </tbody></table>` : `<div style="padding:12px 16px;font-size:13px;color:var(--muted)">Nenhum funcionário lançado. Clique em "+ Lançar".</div>`}
+    </div>`
+  }).join('')
+}
+
+function openCbCourseModal(id) {
+  document.getElementById('cc-id').value = ''
+  document.getElementById('cc-name').value = ''
+  document.getElementById('cc-prov').value = ''
+  document.getElementById('cc-due').value = ''
+  document.getElementById('cc-mand').checked = true
+  document.getElementById('m-cb-title').textContent = 'Novo Curso'
+  if (id) {
+    const c = getCbCourses().find(c => c.id === id)
+    if (c) {
+      document.getElementById('m-cb-title').textContent = 'Editar Curso'
+      document.getElementById('cc-id').value = c.id
+      document.getElementById('cc-name').value = c.name
+      document.getElementById('cc-prov').value = c.provider || ''
+      document.getElementById('cc-due').value = c.dueDate || ''
+      document.getElementById('cc-mand').checked = !!c.mandatory
+    }
+  }
+  open('m-cb-course')
+}
+
+function saveCbCourse() {
+  const name = document.getElementById('cc-name').value.trim()
+  if (!name) { alert('Nome obrigatório'); return }
+  const id = document.getElementById('cc-id').value
+  const courses = getCbCourses()
+  const data = {name, provider: document.getElementById('cc-prov').value.trim(), dueDate: document.getElementById('cc-due').value, mandatory: document.getElementById('cc-mand').checked}
+  if (id) { const i = courses.findIndex(c => c.id === id); if (i >= 0) courses[i] = {...courses[i], ...data} }
+  else courses.push({id: uid(), ...data})
+  setCbCourses(courses); close('m-cb-course'); renderCiber()
+}
+
+function openCbLanModal(courseId) {
+  const c = getCbCourses().find(c => c.id === courseId)
+  document.getElementById('cb-lan-cid').value = courseId
+  document.getElementById('cb-lan-name').value = c?.name || ''
+  const emps = DB.emps().filter(e => e.active !== false)
+  const existing = getCbRecs().filter(r => r.courseId === courseId).map(r => r.employeeId)
+  document.getElementById('cb-lan-emps').innerHTML = emps.map(e =>
+    `<label class="emp-check"><input type="checkbox" value="${e.id}" ${existing.includes(e.id)?'':'checked'}><span>${e.name} (${e.shift}T) ${existing.includes(e.id)?'<em style="color:var(--muted);font-size:10px">já lançado</em>':''}</span></label>`
+  ).join('')
+  document.querySelectorAll('#m-cb-lan .shift-btn').forEach((b,i) => b.classList.toggle('on', i === 0))
+  open('m-cb-lan')
+}
+
+function saveCbLan() {
+  const courseId = document.getElementById('cb-lan-cid').value
+  const c = getCbCourses().find(c => c.id === courseId)
+  const selected = [...document.querySelectorAll('#cb-lan-emps input:checked')].map(cb => cb.value)
+  if (!selected.length) { alert('Selecione ao menos um funcionário'); return }
+  const recs = getCbRecs()
+  selected.forEach(eid => {
+    if (!recs.find(r => r.employeeId === eid && r.courseId === courseId))
+      recs.push({id: uid(), employeeId: eid, courseId, dueDate: c?.dueDate || null, status: 'pending', completedDate: null, score: null, delayReason: null})
+  })
+  setCbRecs(recs); close('m-cb-lan'); renderCiber()
+}
+
+function openCbRecModal(id) {
+  const rec = getCbRecs().find(r => r.id === id); if (!rec) return
+  const emp = getEmp(rec.employeeId), c = getCbCourses().find(c => c.id === rec.courseId)
+  document.getElementById('cbr-id').value = id
+  document.getElementById('cbr-info').innerHTML = `<strong>${emp?.name||'?'}</strong> &bull; ${c?.name||'?'}<br><span style="color:var(--muted)">Prazo: ${fmt(rec.dueDate||c?.dueDate)}</span>`
+  const eff = effStatus(rec)
+  document.getElementById('cbr-status').value = eff === 'delayed' && rec.status !== 'delayed' ? 'delayed' : rec.status
+  document.getElementById('cbr-date').value = rec.completedDate || ''
+  document.getElementById('cbr-score').value = rec.score != null ? rec.score : ''
+  document.getElementById('cbr-reason').value = rec.delayReason || ''
+  toggleCbRec(); open('m-cb-rec')
+}
+
+function toggleCbRec() {
+  const st = document.getElementById('cbr-status').value
+  document.getElementById('cbr-done-wrap').style.display = st === 'completed' ? 'block' : 'none'
+  document.getElementById('cbr-late-wrap').style.display = st === 'delayed' ? 'block' : 'none'
+}
+
+function saveCbRec() {
+  const id = document.getElementById('cbr-id').value
+  const st = document.getElementById('cbr-status').value
+  if (st === 'delayed' && !document.getElementById('cbr-reason').value.trim()) { alert('Informe o motivo'); return }
+  const recs = getCbRecs()
+  const i = recs.findIndex(r => r.id === id)
+  if (i >= 0) {
+    recs[i].status = st
+    recs[i].completedDate = st === 'completed' ? document.getElementById('cbr-date').value : null
+    recs[i].score = st === 'completed' && document.getElementById('cbr-score').value !== '' ? parseInt(document.getElementById('cbr-score').value) : null
+    recs[i].delayReason = st === 'delayed' ? document.getElementById('cbr-reason').value.trim() : null
+  }
+  setCbRecs(recs); close('m-cb-rec'); renderCiber()
+}
+
+function delCbRec() {
+  const id = document.getElementById('cbr-id').value
+  if (!confirm('Excluir registro?')) return
+  setCbRecs(getCbRecs().filter(r => r.id !== id)); close('m-cb-rec'); renderCiber()
+}
+
+// ============================================================
+// RELATÓRIOS
+// ============================================================
+function renderRelatorios() {
+  const type = document.getElementById('rep-type').value
+  const shift = document.getElementById('rep-shift').value
+  const mval = document.getElementById('rep-month').value
+  const [ry, rm] = mval ? mval.split('-').map(Number) : [S.year, S.month + 1]
+  const month = rm - 1, year = ry
+  const el = document.getElementById('rep-content')
+  if (type === 'mensal') el.innerHTML = buildMonthlyReport(month, year, shift)
+  else if (type === 'individual') el.innerHTML = buildIndividualReport(shift)
+  else if (type === 'onboarding') el.innerHTML = buildOnboardingReport(shift)
+  else if (type === 'ciber') el.innerHTML = buildCiberReport(shift)
+  else if (type === 'tecnicos') el.innerHTML = buildTecReport()
+}
+
+function repHeader(title, sub) {
+  return `<div class="rep-wrap"><div class="rep-title">${title}</div><div class="rep-sub">${sub} &bull; Neodent — Controle de Qualidade &bull; Gerado em ${fmt(new Date().toISOString().split('T')[0])}</div>`
+}
+
+function buildMonthlyReport(month, year, shift) {
+  const recs = DB.recs().filter(r => { const d = new Date(r.launchDate+'T12:00:00'); return d.getMonth()===month && d.getFullYear()===year })
+  let emps = DB.emps().filter(e => e.active !== false)
+  if (shift) emps = emps.filter(e => e.shift === shift)
+  const mname = cap(monthStr(month, year))
+  let html = repHeader(`Resumo Mensal de Treinamentos — ${mname}`, shift ? shift + ' Turno' : 'Todos os turnos')
+  html += `<table class="rep-tbl"><thead><tr><th>Funcionário</th><th>Turno</th><th>Treinamento</th><th>Status</th><th>Prazo</th><th>Conclusão</th></tr></thead><tbody>`
+  const shifts = ['1°','2°','3°']
+  shifts.forEach(sh => {
+    if (shift && sh !== shift) return
+    const shEmps = emps.filter(e => e.shift === sh)
+    if (!shEmps.length) return
+    html += `<tr class="rep-grp"><td colspan="6">${sh} Turno</td></tr>`
+    shEmps.forEach(emp => {
+      const empRecs = recs.filter(r => r.employeeId === emp.id)
+      if (!empRecs.length) {
+        html += `<tr><td>${emp.name}</td><td>${emp.shift} T.</td><td colspan="4" style="color:var(--muted)">Nenhum treinamento neste mês</td></tr>`
+      } else {
+        empRecs.forEach((r,i) => {
+          const tr = getTr(r.trainingId), eff = effStatus(r)
+          html += `<tr><td>${i===0?emp.name:''}</td><td>${i===0?emp.shift+' T.':''}</td><td>${tr?.name||'?'}</td><td><span class="badge ${SC[eff]}">${SL[eff]}</span></td><td>${fmt(r.dueDate)}</td><td>${r.completedDate?fmt(r.completedDate):r.delayReason||'—'}</td></tr>`
+        })
+      }
+    })
+  })
+  html += '</tbody></table></div>'
+  return html
+}
+
+function buildIndividualReport(shift) {
+  let emps = DB.emps().filter(e => e.active !== false)
+  if (shift) emps = emps.filter(e => e.shift === shift)
+  const allRecs = DB.recs()
+  let html = repHeader('Status por Funcionário', shift ? shift + ' Turno' : 'Todos os turnos')
+  html += `<table class="rep-tbl"><thead><tr><th>Funcionário</th><th>Turno</th><th>Total</th><th>Concluídos</th><th>Em Andamento</th><th>Pendentes</th><th>Atrasados</th><th>% Conclusão</th></tr></thead><tbody>`
+  emps.forEach(emp => {
+    const recs = allRecs.filter(r => r.employeeId === emp.id)
+    const cnt = {completed:0,in_progress:0,pending:0,delayed:0}
+    recs.forEach(r => { const s=effStatus(r); cnt[s]=(cnt[s]||0)+1 })
+    const pct = recs.length ? Math.round(cnt.completed/recs.length*100) : 0
+    const col = pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'
+    html += `<tr><td style="font-weight:700">${emp.name}</td><td>${emp.shift} T.</td><td>${recs.length}</td><td style="color:var(--success)">${cnt.completed}</td><td style="color:var(--purple)">${cnt.in_progress}</td><td>${cnt.pending}</td><td style="color:var(--danger)">${cnt.delayed}</td><td style="font-weight:700;color:${col}">${pct}%</td></tr>`
+  })
+  html += '</tbody></table></div>'
+  return html
+}
+
+function buildOnboardingReport(shift) {
+  let enrolls = getEnrolls()
+  if (shift) enrolls = enrolls.filter(e => { const emp=getEmp(e.employeeId); return emp?.shift===shift })
+  let html = repHeader('Progresso de Onboarding', shift ? shift + ' Turno' : 'Todos os turnos')
+  html += `<table class="rep-tbl"><thead><tr><th>Funcionário</th><th>Turno</th><th>Início</th><th>Semana Atual</th><th>Dias Concluídos</th><th>% Progresso</th><th>Status</th></tr></thead><tbody>`
+  enrolls.forEach(en => {
+    const emp = getEmp(en.employeeId)
+    const done = Object.keys(en.completedSlots||{}).filter(k=>en.completedSlots[k]).length
+    const pct = Math.round(done/35*100)
+    const today = new Date(); today.setHours(0,0,0,0)
+    const start = new Date(en.startDate+'T00:00:00')
+    const wk = Math.min(6, Math.floor((today-start)/(7*24*3600*1000)))
+    const status = pct===100?'Concluído':pct>0?'Em Andamento':'Não iniciado'
+    const col = pct>=100?'var(--success)':pct>0?'var(--purple)':'var(--muted)'
+    html += `<tr><td style="font-weight:700">${emp?.name||'?'}</td><td>${emp?.shift||'?'} T.</td><td>${fmt(en.startDate)}</td><td>${wk}</td><td>${done}/35</td><td style="font-weight:700;color:${col}">${pct}%</td><td><span class="badge ${pct>=100?'b-done':pct>0?'b-prog':'b-pend'}">${status}</span></td></tr>`
+  })
+  if (!enrolls.length) html += '<tr><td colspan="7" style="text-align:center;color:var(--muted)">Nenhuma matrícula registrada</td></tr>'
+  html += '</tbody></table></div>'
+  return html
+}
+
+function buildCiberReport(shift) {
+  const courses = getCbCourses(), recs = getCbRecs()
+  let emps = DB.emps().filter(e => e.active !== false)
+  if (shift) emps = emps.filter(e => e.shift === shift)
+  let html = repHeader('Conformidade — Cibersegurança', shift ? shift + ' Turno' : 'Todos os turnos')
+  html += `<table class="rep-tbl"><thead><tr><th>Funcionário</th><th>Turno</th>${courses.map(c=>`<th style="max-width:100px">${c.name.length>20?c.name.slice(0,20)+'…':c.name}</th>`).join('')}<th>% Conformidade</th></tr></thead><tbody>`
+  emps.forEach(emp => {
+    const empRecs = recs.filter(r => r.employeeId === emp.id)
+    const done = empRecs.filter(r => effStatus(r)==='completed').length
+    const pct = courses.length ? Math.round(done/courses.length*100) : 0
+    const col = pct>=80?'var(--success)':pct>=50?'var(--warning)':'var(--danger)'
+    html += `<tr><td style="font-weight:700">${emp.name}</td><td>${emp.shift} T.</td>`
+    courses.forEach(c => {
+      const r = empRecs.find(r => r.courseId === c.id)
+      const eff = r ? effStatus(r) : null
+      html += `<td style="text-align:center">${eff?`<span class="badge ${SC[eff]}" style="font-size:10px">${eff==='completed'?'✓':eff==='delayed'?'!':eff==='in_progress'?'►':'○'}</span>`:'<span style="color:#ddd">—</span>'}</td>`
+    })
+    html += `<td style="font-weight:700;color:${col}">${pct}%</td></tr>`
+  })
+  html += '</tbody></table></div>'
+  return html
+}
+
+function buildTecReport() {
+  const sessions = getTechs().sort((a,b) => b.date.localeCompare(a.date))
+  let html = repHeader('Sessões de Treinamento Técnico', 'Histórico completo')
+  html += `<table class="rep-tbl"><thead><tr><th>Data</th><th>Título</th><th>Categoria</th><th>Apresentador</th><th>Duração</th><th>Participantes</th></tr></thead><tbody>`
+  sessions.forEach(s => {
+    const atts = (s.attendees||[]).map(id => getEmp(id)?.name).filter(Boolean).join(', ')
+    html += `<tr><td>${fmt(s.date)}</td><td style="font-weight:700">${s.title}</td><td>${s.category}</td><td>${s.presenterName}</td><td>${s.durationH}h</td><td style="font-size:11px">${atts||'—'}</td></tr>`
+  })
+  if (!sessions.length) html += '<tr><td colspan="6" style="text-align:center;color:var(--muted)">Nenhuma sessão registrada</td></tr>'
+  html += '</tbody></table></div>'
+  return html
+}
+
+function exportCurrentCSV() {
+  const type = document.getElementById('rep-type').value
+  const shift = document.getElementById('rep-shift').value
+  const mval = document.getElementById('rep-month').value
+  const [ry, rm] = mval ? mval.split('-').map(Number) : [S.year, S.month + 1]
+  const month = rm - 1, year = ry
+  let rows = [], filename = 'relatorio.csv'
+  if (type === 'mensal') {
+    filename = `mensal_${year}_${String(month+1).padStart(2,'0')}.csv`
+    rows = [['Funcionário','Turno','Treinamento','Status','Prazo','Conclusão']]
+    const recs = DB.recs().filter(r => { const d=new Date(r.launchDate+'T12:00:00'); return d.getMonth()===month&&d.getFullYear()===year })
+    let emps = DB.emps().filter(e=>e.active!==false); if(shift) emps=emps.filter(e=>e.shift===shift)
+    emps.forEach(emp => {
+      const er = recs.filter(r=>r.employeeId===emp.id)
+      if (!er.length) rows.push([emp.name, emp.shift+' T.', '—', '—', '—', '—'])
+      else er.forEach(r => { const tr=getTr(r.trainingId),eff=effStatus(r); rows.push([emp.name,emp.shift+' T.',tr?.name||'?',SL[eff],fmt(r.dueDate),r.completedDate?fmt(r.completedDate):r.delayReason||'—']) })
+    })
+  } else if (type === 'ciber') {
+    filename = 'ciberseguranca.csv'
+    const courses=getCbCourses(),recs=getCbRecs()
+    rows = [['Funcionário','Turno',...courses.map(c=>c.name),'% Conformidade']]
+    let emps=DB.emps().filter(e=>e.active!==false); if(shift) emps=emps.filter(e=>e.shift===shift)
+    emps.forEach(emp => {
+      const er=recs.filter(r=>r.employeeId===emp.id)
+      const done=er.filter(r=>effStatus(r)==='completed').length
+      const pct=courses.length?Math.round(done/courses.length*100):0
+      rows.push([emp.name,emp.shift+' T.',...courses.map(c=>{const r=er.find(r=>r.courseId===c.id);return r?SL[effStatus(r)]:'Não lançado'}),pct+'%'])
+    })
+  } else if (type === 'onboarding') {
+    filename = 'onboarding.csv'
+    rows = [['Funcionário','Turno','Início','Semana','Dias Concluídos','Progresso']]
+    let enrolls=getEnrolls(); if(shift) enrolls=enrolls.filter(e=>{const emp=getEmp(e.employeeId);return emp?.shift===shift})
+    enrolls.forEach(en => {
+      const emp=getEmp(en.employeeId),done=Object.keys(en.completedSlots||{}).filter(k=>en.completedSlots[k]).length
+      const today=new Date();today.setHours(0,0,0,0);const start=new Date(en.startDate+'T00:00:00')
+      const wk=Math.min(6,Math.floor((today-start)/(7*24*3600*1000)))
+      rows.push([emp?.name||'?',emp?.shift||'?'+' T.',fmt(en.startDate),wk,done+'/35',Math.round(done/35*100)+'%'])
+    })
+  }
+  if (!rows.length) { alert('Nenhum dado para exportar'); return }
+  const csv = rows.map(r => r.map(c => '"'+String(c||'').replace(/"/g,'""')+'"').join(',')).join('\n')
+  const a = Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob(['﻿'+csv],{type:'text/csv'})),download:filename})
+  a.click()
+}
+
+// ============================================================
+// DEMO DATA
+// ============================================================
+function seedDemo(){
+  if(DB.emps().length>0 && !confirm('Isso vai substituir todos os dados atuais. Continuar?')) return
+  DB.setEmps([
+    {id:'e1', name:'Ana Souza',       role:'Técnica de Qualidade',   shift:'1°', active:true},
+    {id:'e2', name:'Carlos Mendes',   role:'Inspetor de Qualidade',  shift:'1°', active:true},
+    {id:'e3', name:'Fernanda Lima',   role:'Analista de Qualidade',  shift:'1°', active:true},
+    {id:'e4', name:'Rafael Costa',    role:'Técnico de Qualidade',   shift:'1°', active:true},
+    {id:'e5', name:'Juliana Alves',   role:'Inspetora de Qualidade', shift:'2°', active:true},
+    {id:'e6', name:'Marcos Oliveira', role:'Técnico de Qualidade',   shift:'2°', active:true},
+    {id:'e7', name:'Patrícia Santos', role:'Analista de Qualidade',  shift:'2°', active:true},
+    {id:'e8', name:'Diego Ferreira',  role:'Técnico de Qualidade',   shift:'2°', active:true},
+    {id:'e9', name:'Camila Rocha',    role:'Inspetora de Qualidade', shift:'3°', active:true},
+    {id:'e10',name:'Bruno Martins',   role:'Técnico de Qualidade',   shift:'3°', active:true},
+    {id:'e11',name:'Larissa Nunes',   role:'Técnica de Qualidade',   shift:'3°', active:true},
+    {id:'e99',name:'Claude (IA)',      role:'Assistente de Qualidade',shift:'1°', active:true},
+  ])
+  DB.setTrs([
+    {id:'t1', name:'BPF - Boas Práticas de Fabricação', category:'Qualidade'},
+    {id:'t2', name:'ISO 13485 - Gestão da Qualidade',   category:'Regulatório'},
+    {id:'t3', name:'EPI e Segurança no Trabalho',       category:'Segurança'},
+    {id:'t4', name:'Inspeção Visual de Implantes',      category:'Processo'},
+  ])
+  // Onboarding
+  setEnrolls([
+    {id:'en1',employeeId:'e1',startDate:'2026-06-02',completedSlots:{W0D0:true,W0D1:true,W0D2:true,W0D3:true,W0D4:true,W1D0:true,W1D1:true}},
+    {id:'en2',employeeId:'e4',startDate:'2026-05-19',completedSlots:{W0D0:true,W0D1:true,W0D2:true,W0D3:true,W0D4:true,W1D0:true,W1D1:true,W1D2:true,W1D3:true,W1D4:true,W2D0:true,W2D1:true,W2D2:true,W2D3:true,W2D4:true,W3D0:true,W3D1:true}},
+  ])
+  // Técnicos
+  setTechs([
+    {id:'ts1',title:'Controle Dimensional de Implantes',category:'Processo',presenterName:'Carlos Mendes',date:'2026-06-03',durationH:2,description:'Revisão das técnicas de medição e tolerâncias para implantes de titânio.',attendees:['e1','e3','e4','e5','e6','e7']},
+    {id:'ts2',title:'Análise de Falhas em Dispositivos',category:'Qualidade',presenterName:'Ana Souza',date:'2026-05-20',durationH:1.5,description:'Casos práticos de análise de falhas e não conformidades no histórico do setor.',attendees:['e2','e3','e5','e6','e8','e9','e10','e11']},
+    {id:'ts3',title:'FMEA — Análise de Modo e Efeito de Falha',category:'Regulatório',presenterName:'Dr. Roberto Silva (Externo)',date:'2026-06-10',durationH:3,description:'Workshop sobre FMEA para dispositivos médicos conforme ISO 14971.',attendees:['e1','e2','e3','e4','e5','e6','e99']},
+  ])
+  // Cibersegurança
+  setCbCourses([
+    {id:'cc1',name:'Phishing e Engenharia Social',provider:'Neodent IT Security',mandatory:true,dueDate:'2026-06-30'},
+    {id:'cc2',name:'LGPD para Colaboradores',provider:'Neodent Jurídico',mandatory:true,dueDate:'2026-06-30'},
+    {id:'cc3',name:'Senhas e Autenticação Segura',provider:'Neodent IT Security',mandatory:true,dueDate:'2026-07-15'},
+    {id:'cc4',name:'Uso Seguro de Dispositivos',provider:'Neodent IT Security',mandatory:false,dueDate:'2026-07-31'},
+  ])
+  setCbRecs([
+    {id:'cr1',employeeId:'e1',courseId:'cc1',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-04',score:92,delayReason:null},
+    {id:'cr2',employeeId:'e2',courseId:'cc1',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-05',score:88,delayReason:null},
+    {id:'cr3',employeeId:'e3',courseId:'cc1',dueDate:'2026-06-30',status:'pending',completedDate:null,score:null,delayReason:null},
+    {id:'cr4',employeeId:'e5',courseId:'cc1',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-03',score:95,delayReason:null},
+    {id:'cr5',employeeId:'e99',courseId:'cc1',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-01',score:100,delayReason:null},
+    {id:'cr6',employeeId:'e1',courseId:'cc2',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-05',score:85,delayReason:null},
+    {id:'cr7',employeeId:'e4',courseId:'cc2',dueDate:'2026-06-30',status:'in_progress',completedDate:null,score:null,delayReason:null},
+    {id:'cr8',employeeId:'e7',courseId:'cc2',dueDate:'2026-06-30',status:'delayed',completedDate:null,score:null,delayReason:'Aguardando liberação do gestor de TI'},
+    {id:'cr9',employeeId:'e99',courseId:'cc2',dueDate:'2026-06-30',status:'completed',completedDate:'2026-06-01',score:100,delayReason:null},
+    {id:'cr10',employeeId:'e1',courseId:'cc3',dueDate:'2026-07-15',status:'pending',completedDate:null,score:null,delayReason:null},
+    {id:'cr11',employeeId:'e99',courseId:'cc3',dueDate:'2026-07-15',status:'completed',completedDate:'2026-06-01',score:100,delayReason:null},
+    {id:'cr12',employeeId:'e2',courseId:'cc3',dueDate:'2026-07-15',status:'pending',completedDate:null,score:null,delayReason:null},
+  ])
+  DB.setRecs([
+    // BPF — lançado 01/06, prazo 21/06
+    {id:'r1', employeeId:'e1', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'completed',  completedDate:'2026-06-03',delayReason:null},
+    {id:'r2', employeeId:'e2', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'completed',  completedDate:'2026-06-04',delayReason:null},
+    {id:'r3', employeeId:'e3', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'in_progress',completedDate:null,delayReason:null},
+    {id:'r4', employeeId:'e4', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r5', employeeId:'e5', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'completed',  completedDate:'2026-06-05',delayReason:null},
+    {id:'r6', employeeId:'e6', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'in_progress',completedDate:null,delayReason:null},
+    {id:'r7', employeeId:'e7', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r8', employeeId:'e8', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'delayed',    completedDate:null,delayReason:'Férias programadas'},
+    {id:'r9', employeeId:'e9', trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'delayed',    completedDate:null,delayReason:'Afastamento médico'},
+    {id:'r10',employeeId:'e10',trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r11',employeeId:'e11',trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'completed',  completedDate:'2026-06-06',delayReason:null},
+    {id:'r30',employeeId:'e99',trainingId:'t1',launchDate:'2026-06-01',dueDate:'2026-06-21',status:'completed',  completedDate:'2026-06-01',delayReason:null},
+    // ISO 13485 — lançado 02/06, prazo 22/06
+    {id:'r12',employeeId:'e1', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'completed',  completedDate:'2026-06-05',delayReason:null},
+    {id:'r13',employeeId:'e2', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'in_progress',completedDate:null,delayReason:null},
+    {id:'r14',employeeId:'e3', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r15',employeeId:'e4', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'completed',  completedDate:'2026-06-06',delayReason:null},
+    {id:'r16',employeeId:'e5', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'delayed',    completedDate:null,delayReason:'Treinamento presencial reagendado pela instrutora'},
+    {id:'r17',employeeId:'e6', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r18',employeeId:'e9', trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'completed',  completedDate:'2026-06-04',delayReason:null},
+    {id:'r19',employeeId:'e10',trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'in_progress',completedDate:null,delayReason:null},
+    {id:'r31',employeeId:'e99',trainingId:'t2',launchDate:'2026-06-02',dueDate:'2026-06-22',status:'completed',  completedDate:'2026-06-02',delayReason:null},
+    // EPI — lançado 04/06, prazo 24/06
+    {id:'r20',employeeId:'e1', trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'completed',  completedDate:'2026-06-06',delayReason:null},
+    {id:'r21',employeeId:'e2', trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r22',employeeId:'e5', trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r23',employeeId:'e7', trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'in_progress',completedDate:null,delayReason:null},
+    {id:'r24',employeeId:'e9', trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'pending',    completedDate:null,delayReason:null},
+    {id:'r25',employeeId:'e11',trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'delayed',    completedDate:null,delayReason:'Funcionária em treinamento externo obrigatório'},
+    {id:'r32',employeeId:'e99',trainingId:'t3',launchDate:'2026-06-04',dueDate:'2026-06-24',status:'completed',  completedDate:'2026-06-04',delayReason:null},
+  ])
+  location.reload()
+}
+
+// ============================================================
+// INIT
+// ============================================================
+// ============================================================
+// ANIMATIONS
+// ============================================================
+
+// Page entrance trigger
+const origNavigate = navigate
+navigate = function(page) {
+  origNavigate(page)
+  const el = document.getElementById('page-' + page)
+  if (el) { el.classList.remove('anim'); void el.offsetWidth; el.classList.add('anim') }
+}
+
+// KPI count-up animation
+function animCount(elId, target, suffix='') {
+  const el = document.getElementById(elId)
+  if (!el || isNaN(target)) return
+  let start = null
+  const duration = 700
+  const step = ts => {
+    if (!start) start = ts
+    const p = Math.min((ts - start) / duration, 1)
+    const ease = 1 - Math.pow(1 - p, 3)
+    el.textContent = Math.round(ease * target) + suffix
+    if (p < 1) requestAnimationFrame(step)
+  }
+  requestAnimationFrame(step)
+}
+
+// Mouse ripple on click
+document.addEventListener('click', e => {
+  if (e.target.closest('.modal')) return
+  const d = document.createElement('div')
+  d.className = 'click-ripple'
+  d.style.cssText = `left:${e.clientX}px;top:${e.clientY}px`
+  document.body.appendChild(d)
+  d.addEventListener('animationend', () => d.remove())
+})
+
+
+// Hook renderDash to animate KPIs
+const _origRenderDash = renderDash
+renderDash = function() {
+  _origRenderDash()
+  setTimeout(() => {
+    const recs = monthRecs(), n = recs.length
+    const cnt = {completed:0,in_progress:0,pending:0,delayed:0}
+    recs.forEach(r => { const s=effStatus(r); cnt[s]=(cnt[s]||0)+1 })
+    animCount('kv-total', n)
+    animCount('kv-done', cnt.completed)
+    animCount('kv-prog', cnt.in_progress)
+    animCount('kv-pend', cnt.pending)
+    animCount('kv-late', cnt.delayed)
+  }, 50)
+}
+
+function finishInit() {
+  updateML()
+  const now = new Date()
+  document.getElementById('rep-month').value = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+  navigate('dashboard')
+}
+
+async function initApp() {
+  await sbLoad()
+  finishInit()
+}
+
+initApp()
+</script>
+</body>
+</html>
