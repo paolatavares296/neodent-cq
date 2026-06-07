@@ -825,9 +825,16 @@ async function sbLoad() {
     const r = await fetch(`${SB_URL}/rest/v1/app_data?select=key,value`, { headers: SB_H })
     if (!r.ok) throw new Error(await r.text())
     const rows = await r.json()
-    rows.forEach(({key, value}) => localStorage.setItem(key, JSON.stringify(value)))
+    if (rows.length > 0) {
+      rows.forEach(({key, value}) => localStorage.setItem(key, JSON.stringify(value)))
+    } else {
+      // Supabase vazio: migra dados locais existentes para a nuvem
+      const hasLocal = SB_KEYS.some(k => localStorage.getItem(k))
+      if (hasLocal) sbPush()
+    }
     setSyncStatus('synced')
-  } catch(e) { console.warn('Supabase load:', e); setSyncStatus('error') }
+    return rows.length
+  } catch(e) { console.warn('Supabase load:', e); setSyncStatus('error'); return 0 }
 }
 
 let _sbTimer
